@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NekoPharm · Understand. Learn. Master Pharmacology.</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='88'%3E%F0%9F%90%B1%3C/text%3E%3C/svg%3E">
+<script>
+  /* set the theme before first paint to avoid a flash */
+  (function(){try{var t=localStorage.getItem('wanipharm_theme')||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light');document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+</script>
+<style>
+  :root{
+    --stem:#0098e4;      /* radical-blue */
+    --class:#dd0093;     /* kanji-pink   */
+    --drug:#9d34b3;      /* vocab-purple */
+    --stem-dark:#0079bb;
+    --bg:#f2f4f8;
+    --ink:#23262d;
+    --muted:#5f6675;
+    --muted-2:#7c8493;
+    --line:#e3e7ee;
+    --ok:#5a9e00;
+    --bad:#d63a49;
+    --card:#ffffff;
+    --surface:#ffffff;
+    --subtle:#f5f6f9;     /* faint panel (info box, modal footer) */
+    --chip-bg:#eef1f5;    /* small key/kbd chips */
+    --login-bg:#1b1e24;   /* auth gate backdrop (dark in both themes) */
+    --ghost-hover:rgba(0,0,0,.05);
+    --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+    --apprentice:#dd0093;
+    --guru:#882d9e;
+    --master:#294ddb;
+    --enlightened:#0093dd;
+    --burned:#434343;
+    /* motion easing */
+    --ease-out-quart:cubic-bezier(0.25,1,0.5,1);
+    --ease-out-quint:cubic-bezier(0.22,1,0.36,1);
+    /* semantic z-index scale */
+    --z-sticky:10;     /* sticky header */
+    --z-overlay:100;   /* full-screen session / lesson / summary */
+    --z-modal:200;     /* item sheet + keyboard help */
+    --z-toast:300;     /* transient toast */
+    --z-login:400;     /* auth gate, above everything */
+  }
+  :root[data-theme="dark"]{
+    --stem-dark:#2aa6ec;
+    --bg:#15171c;
+    --ink:#e7e9ee;
+    --muted:#9aa1ad;
+    --muted-2:#7e8694;
+    --line:#2b2f37;
+    --ok:#7ec13b;
+    --bad:#ff6b76;
+    --card:#1e2127;
+    --surface:#1e2127;
+    --subtle:#181b20;
+    --chip-bg:#2b2f37;
+    --login-bg:#0f1115;
+    --ghost-hover:rgba(255,255,255,.07);
+    --burned:#6a6f78;
+    color-scheme:dark;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5}
+  a{color:inherit}
+  input{background:var(--surface);color:var(--ink)}
+  header{background:#2b2b2b;color:#fff;padding:0 20px;display:flex;align-items:center;
+    gap:18px;height:56px;position:sticky;top:0;z-index:var(--z-sticky)}
+  header .logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:19px;letter-spacing:.3px;color:#fff;text-decoration:none}
+  header .logo-mark{width:30px;height:26px;flex:none}
+  header .logo-txt b{color:#ef72b0;font-weight:800}
+  header nav{display:flex;gap:4px;margin-left:8px}
+  header nav button{background:none;border:none;color:#cfcfcf;font-size:14px;font-weight:600;
+    padding:8px 12px;border-radius:6px;cursor:pointer}
+  header nav button:hover{background:#3a3a3a;color:#fff}
+  header nav button.active{color:#fff;background:#3a3a3a}
+  header .spacer{flex:1}
+  header .lvl{background:var(--stem);font-weight:700;font-size:13px;padding:5px 12px;border-radius:20px}
+  .wrap{max-width:900px;margin:0 auto;padding:24px 20px 80px}
+
+  /* ===== Button system (single source of truth) =====
+     base .btn + one variant (-primary | -secondary | -ghost | -danger)
+     optional size (-sm) or width (-block). Icon-only utilities use .icon-btn. */
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--s2);
+    border:1.5px solid transparent;border-radius:10px;padding:11px 18px;
+    font-size:15px;font-weight:650;line-height:1;cursor:pointer;font-family:inherit;
+    transition:background .15s var(--ease-out-quart),border-color .15s var(--ease-out-quart),color .15s var(--ease-out-quart),transform .1s ease}
+  .btn:focus-visible{outline:3px solid var(--stem);outline-offset:2px}
+  .btn:active:not([disabled]){transform:scale(.97)}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
+  .btn-primary{background:var(--stem);color:#fff}
+  .btn-primary:hover{background:var(--stem-dark)}
+  .btn-secondary{background:var(--surface);color:var(--ink);border-color:var(--line)}
+  .btn-secondary:hover{border-color:var(--stem);color:var(--stem)}
+  .btn-secondary b{color:var(--stem)}
+  .btn-ghost{background:transparent;color:var(--muted)}
+  .btn-ghost:hover{color:var(--ink);background:var(--ghost-hover)}
+  .btn-danger{background:transparent;color:var(--bad);border-color:var(--line)}
+  .btn-danger:hover{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+  .btn-sm{padding:7px 13px;font-size:13px;font-weight:600;border-radius:8px}
+  .btn-block{display:flex;width:100%}
+  .btn kbd{font:inherit;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px;
+    background:rgba(255,255,255,.22);color:inherit}
+  .btn-img{width:42px;height:42px;object-fit:contain;flex:none;margin:-6px 4px -6px -2px}
+  .btn-secondary kbd,.btn-ghost kbd{background:var(--chip-bg);color:var(--muted)}
+
+  /* icon-only utility button */
+  .icon-btn{position:relative;display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;
+    border:none;border-radius:8px;background:transparent;color:var(--muted);font-size:18px;cursor:pointer;font-family:inherit;
+    transition:background .15s ease,color .15s ease}
+  .icon-btn::before{content:"";position:absolute;inset:-6px}  /* 44px touch target */
+  .icon-btn:hover{background:var(--ghost-hover);color:var(--ink)}
+  .icon-btn:focus-visible{outline:3px solid var(--stem);outline-offset:2px}
+  .icon-btn.on-dark{color:#cfcfcf}
+  .icon-btn.on-dark:hover{background:#3a3a3a;color:#fff}
+  .icon-btn[disabled]{opacity:.3;cursor:not-allowed;pointer-events:none}
+  .levelnav{display:flex;align-items:center;gap:var(--s1)}
+  .levelnav .icon-btn{width:28px;height:28px;font-size:20px;color:var(--muted)}
+
+  /* typography polish: balanced headings, tidy prose */
+  .sum-wrap h2,.login-tag{text-wrap:balance}
+  .today-sub,.dcard .sub,.login-note,.info p,.sheet .body p,.lesson-detail p{text-wrap:pretty}
+
+  /* dashboard — calm, momentum-first */
+  .dash-h{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:var(--s3)}
+  .dash-h .dash-h-sub{font-weight:500;color:var(--muted);font-size:13px;margin-left:6px}
+
+  .today{padding:var(--s5) 0 var(--s5)}
+  .today-greet{color:var(--muted);font-size:14px;margin-bottom:var(--s2)}
+  .today-headline{font-size:30px;font-weight:800;letter-spacing:-0.02em;line-height:1.1;
+    margin-bottom:var(--s2);text-wrap:balance}
+  .today-headline .hl{color:var(--stem)}
+  .today-sub{color:var(--muted);font-size:15px;margin-bottom:var(--s5);max-width:60ch}
+  .today-actions{display:flex;gap:var(--s3);flex-wrap:wrap}
+  .today-actions .btn{width:400px;max-width:100%;flex-direction:row;justify-content:flex-start;padding:12px 18px;gap:14px;height:auto}
+  .today-actions .btn-img{width:150px;height:150px;margin:0;flex:none}
+  .btn-label{display:inline-flex;align-items:center;gap:8px;white-space:nowrap;font-size:17px}
+
+  /* review forecast */
+  .forecast{padding:var(--s5) 0;border-top:1px solid var(--line)}
+  .forecast-list{display:flex;flex-direction:column;gap:7px;margin-top:var(--s3)}
+  .fc-row{display:flex;align-items:center;gap:var(--s3);font-size:13px}
+  .fc-when{flex:0 0 96px;color:var(--muted)}
+  .fc-bar{flex:1;height:8px;background:var(--line);border-radius:5px;overflow:hidden}
+  .fc-bar i{display:block;height:100%;background:var(--stem);border-radius:5px;
+    transform-origin:left;transition:transform .5s var(--ease-out-quart)}
+  .fc-n{flex:0 0 34px;text-align:right;font-weight:700}
+  .fc-empty{font-size:14px;color:var(--muted);margin-top:var(--s2)}
+
+  /* level progress breakdown */
+  .levelnow{padding:var(--s5) 0;border-top:1px solid var(--line)}
+  .levelnow-head{display:flex;justify-content:space-between;align-items:baseline;gap:var(--s3);margin-bottom:var(--s3)}
+  .levelnow-title{font-size:15px;font-weight:700}
+  .levelnow-sub{font-size:13px;color:var(--muted)}
+  .lvlbreak{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s3);margin-bottom:var(--s3)}
+  .lvlcard{border:1px solid var(--line);border-radius:10px;padding:var(--s3);background:var(--surface);min-width:0}
+  .lvlcard .lh{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;margin-bottom:var(--s2)}
+  .lvlcard .lh i{width:18px;height:18px;border-radius:5px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800}
+  .lvlcard .lrow{display:flex;align-items:center;justify-content:space-between;gap:6px}
+  .lvlcard .lcount{font-size:17px;font-weight:800}
+  .lvlcard .lcount small{font-size:13px;color:var(--muted);font-weight:600}
+  .lvlcard .lsee{flex:none}
+  .tickbar{display:flex;flex-wrap:wrap;gap:3px}
+  .tick{width:11px;height:7px;border-radius:2px;background:var(--line)}
+  .tick.on{background:var(--ok)}
+
+  /* item spread table */
+  .spread{padding:var(--s5) 0;border-top:1px solid var(--line)}
+  .spread-head{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);flex-wrap:wrap;margin-bottom:var(--s2)}
+  .spread-legend{display:flex;gap:var(--s3);font-size:12px;color:var(--muted)}
+  .spread-legend span{display:inline-flex;align-items:center;gap:5px}
+  .tier-badge{width:15px;height:15px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:9px;font-weight:800}
+  .tier-badge.stem{background:var(--stem)} .tier-badge.class{background:var(--class)} .tier-badge.drug{background:var(--drug)}
+  .spread-row{display:flex;align-items:center;gap:var(--s3);padding:8px 0;border-top:1px solid var(--line)}
+  .spread-row:first-child{border-top:none}
+  .spread-stage{flex:1;display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;min-width:0}
+  .sdot{width:18px;height:18px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:800}
+  .sdot.apprentice{background:var(--apprentice)} .sdot.guru{background:var(--guru)} .sdot.master{background:var(--master)} .sdot.enlightened{background:var(--enlightened)} .sdot.burned{background:var(--burned)}
+  .spread-pills{display:flex;gap:6px}
+  .spill{min-width:42px;text-align:center;padding:4px 8px;border-radius:13px;font-size:13px;font-weight:700;color:#fff}
+  .spill.stem{background:var(--stem)} .spill.class{background:var(--class)} .spill.drug{background:var(--drug)}
+  .spill.total{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+  .spill.zero{opacity:.3}
+
+  /* recently / critical cards */
+  .dash-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:var(--s4);margin-top:var(--s5)}
+  .dcard{border:1px solid var(--line);border-radius:12px;padding:var(--s4);background:var(--surface)}
+  .dcard h3{font-size:15px;font-weight:700;display:flex;align-items:center;gap:7px;margin-bottom:3px}
+  .dcard .sub{font-size:13px;color:var(--muted);margin-bottom:var(--s3)}
+  .chipwrap{display:flex;flex-wrap:wrap;gap:7px}
+  .chipwrap .empty{font-size:13px;color:var(--muted);text-align:center;padding:var(--s3) 0;width:100%;
+    display:flex;flex-direction:column;align-items:center;gap:var(--s2)}
+  .empty-art{width:160px;max-width:78%;height:auto;display:block}
+  .chip-more{background:none;border:1px dashed var(--line);border-radius:6px;color:var(--muted);font-size:13px;font-weight:600;padding:8px 10px;cursor:pointer;font-family:inherit}
+  .chip-more:hover{border-color:var(--stem);color:var(--stem)}
+
+  /* item grid */
+  .levels .level-block{margin-bottom:22px}
+  .level-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .level-head .pill{background:#2b2b2b;color:#fff;font-weight:700;font-size:13px;padding:3px 11px;border-radius:14px}
+  .level-head .locked{background:var(--muted-2)}
+  .level-head small{color:var(--muted);font-weight:600}
+  .igrid{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{color:#fff;border-radius:6px;padding:8px 11px;font-weight:700;font-size:15px;cursor:pointer;
+    min-width:46px;text-align:center;position:relative;box-shadow:0 2px 0 rgba(0,0,0,.18)}
+  .chip.stem{background:var(--stem)}
+  .chip.class{background:var(--class)}
+  .chip.drug{background:var(--drug)}
+  .chip.locked{background:var(--line);color:var(--muted);cursor:default;box-shadow:none}
+  .chip .dot{position:absolute;top:-6px;right:-6px;min-width:15px;height:15px;padding:0 2px;border-radius:8px;border:2px solid var(--card);
+    display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;line-height:1}
+  .chip .dot.apprentice{background:var(--apprentice)}
+  .chip .dot.guru{background:var(--guru)}
+  .chip .dot.master{background:var(--master)}
+  .chip .dot.enlightened{background:var(--enlightened)}
+  .chip .dot.burned{background:var(--burned)}
+
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin-bottom:8px}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .legend i{width:13px;height:13px;border-radius:3px;display:inline-block}
+
+  /* session */
+  .session{position:fixed;inset:0;background:var(--bg);z-index:var(--z-overlay);display:none;flex-direction:column}
+  .session.show{display:flex}
+  .s-top{height:8px;background:var(--line)}
+  .s-top .bar{height:100%;background:var(--ok);width:100%;transform-origin:left;transform:scaleX(0);transition:transform .3s var(--ease-out-quart)}
+  .s-bar2{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;font-size:13px;color:var(--muted)}
+  .prompt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:#fff;text-align:center;padding:20px;transition:background .15s}
+  .prompt.stem{background:var(--stem)} .prompt.class{background:var(--class)} .prompt.drug{background:var(--drug)}
+  .prompt .type{font-size:14px;font-weight:600;opacity:.85;text-transform:uppercase;letter-spacing:1px;
+    background:rgba(0,0,0,.18);padding:4px 14px;border-radius:14px;margin-bottom:18px}
+  .prompt .big{font-size:54px;font-weight:800}
+  .prompt .ask{margin-top:14px;font-size:18px;font-weight:600;opacity:.95}
+  .prompt.part-reading{box-shadow:inset 0 7px 0 rgba(0,0,0,.28)}
+  .parttag{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;
+    padding:2px 9px;border-radius:11px;margin-right:8px;vertical-align:middle}
+  .parttag.meaning{background:#fff;color:#2b2b2b}
+  .parttag.reading{background:#1f1f1f;color:#fff}
+
+  /* browse / search */
+  .searchbar{position:relative;margin-bottom:18px}
+  .searchbar input{width:100%;font-size:16px;padding:13px 16px 13px 42px;border:2px solid var(--line);border-radius:10px;outline:none}
+  .searchbar input:focus{border-color:var(--stem)}
+  .searchbar .ico{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:16px}
+  .sys-block{margin-bottom:22px}
+  .sys-head{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:10px;border-bottom:2px solid var(--line);padding-bottom:6px}
+  .sys-head small{color:var(--muted);font-weight:600;font-size:12px}
+  .sys-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
+  .sys-label{flex:0 0 64px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:8px}
+  .chip.kbfocus{outline:3px solid var(--ink);outline-offset:2px}
+  kbd{background:var(--chip-bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px;font-family:inherit;color:var(--muted)}
+
+  /* quick-review row */
+  .quickrow{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s5)}
+  .quicklabel{font-size:13px;font-weight:600;color:var(--muted)}
+  .quicknote{font-size:12px;color:var(--muted)}
+
+  /* wrap-up summary */
+  .sum-wrap{max-width:560px;margin:0 auto;padding:48px 22px;width:100%}
+  .sum-wrap h2{font-size:26px;text-align:center;margin-bottom:24px}
+  .sum-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+  .sum-stat{background:var(--card);border-radius:12px;padding:18px 8px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+  .sum-stat .n{font-size:30px;font-weight:800}
+  .sum-stat .t{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px}
+  .sum-stat.ok .n{color:var(--ok)} .sum-stat.bad .n{color:var(--bad)}
+  .sum-level{text-align:center;font-size:15px;font-weight:600;margin-bottom:18px;min-height:20px}
+  .sum-level .up{display:inline-block;background:var(--stem);color:#fff;padding:6px 16px;border-radius:20px}
+  .sum-h3{font-size:13px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
+  .sum-miss{display:flex;flex-direction:column;gap:8px;max-height:38vh;overflow:auto;margin-bottom:8px}
+  .miss-card{display:flex;align-items:center;gap:10px;background:var(--card);border-radius:10px;padding:10px 12px;cursor:pointer;
+    box-shadow:0 1px 4px rgba(0,0,0,.06)}
+  .miss-card .mc-chip{color:#fff;border-radius:6px;padding:4px 9px;font-weight:700;font-size:14px;white-space:nowrap}
+  .miss-card.stem .mc-chip{background:var(--stem)} .miss-card.class .mc-chip{background:var(--class)} .miss-card.drug .mc-chip{background:var(--drug)}
+  .miss-card .mc-ans{font-size:13px;color:var(--muted)}
+  .miss-card .mc-ans b{color:var(--ink)}
+  .sum-actions{display:flex;gap:12px;margin-top:18px}
+  .sum-actions .btn{flex:1}
+
+  /* user chip */
+  .kbsheet{max-width:440px}
+  .kbsheet .body{max-height:70vh;overflow:auto}
+  .kbrow{display:flex;align-items:center;gap:8px;padding:4px 0;font-size:14px}
+  .kbrow span{color:var(--muted)}
+  .kbrow kbd{background:var(--chip-bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 8px;font-size:12px;font-family:inherit;color:var(--muted);min-width:20px;text-align:center}
+  .userchip{display:flex;align-items:center;gap:6px;background:#3a3a3a;border-radius:18px;padding:4px 6px 4px 12px;font-size:13px;font-weight:600;color:#fff}
+  .userchip button{background:#555;border:none;color:#fff;width:24px;height:24px;border-radius:50%;cursor:pointer;font-size:13px}
+  .userchip button:hover{background:#6a6a6a}
+  .syncstat{font-size:11px;font-weight:600;color:#cfcfcf;white-space:nowrap;max-width:0;overflow:hidden;opacity:0;transition:opacity .25s,max-width .25s}
+  .syncstat.show{opacity:.85;max-width:90px;margin-right:2px}
+
+  /* login overlay */
+  .login{position:fixed;inset:0;z-index:var(--z-login);background:var(--login-bg);
+    display:none;align-items:center;justify-content:center;padding:20px}
+  .login.show{display:flex}
+  .login-card{background:var(--card);border:1px solid var(--line);border-radius:16px;max-width:380px;width:100%;padding:30px 28px;box-shadow:0 18px 50px rgba(0,0,0,.3);text-align:center}
+  .login-mark{width:92px;height:80px;display:block;margin:0 auto 6px}
+  .login-logo{font-weight:800;font-size:26px;margin-bottom:4px;letter-spacing:.3px}
+  .login-logo span{color:var(--class)}
+  .login-tag{color:var(--muted);font-size:13px;margin-bottom:18px;text-transform:none}
+  .login-card input{width:100%;font-size:15px;padding:12px 14px;border:2px solid var(--line);border-radius:9px;outline:none;margin-bottom:10px}
+  .login-card input:focus{border-color:var(--stem)}
+  .login-err{color:var(--bad);font-size:13px;min-height:18px;margin-bottom:6px;font-weight:600}
+  .login-btns{display:flex;gap:10px;margin-bottom:12px}
+  .login-btns .btn{flex:1}
+  .login-guest{background:none;border:none;color:var(--stem);font-weight:600;font-size:14px;cursor:pointer}
+  #gbtn{display:flex;justify-content:center;margin-bottom:8px}
+  .gnote{font-size:12px;color:var(--muted);line-height:1.45;margin-bottom:6px}
+  .gnote a{color:var(--stem)}
+  .login-or{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px;margin:14px 0}
+  .login-or::before,.login-or::after{content:"";flex:1;height:1px;background:var(--line)}
+  .login-note{color:#aaa;font-size:11px;margin-top:14px;line-height:1.4}
+
+  /* lesson teaching */
+  .lesson-body{background:var(--card);flex:1;overflow:auto;padding:20px 18px 16px;display:flex;flex-direction:column}
+  .lesson-detail{max-width:560px;margin:0 auto;width:100%;flex:1}
+  .lesson-detail h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 3px}
+  .lesson-detail h4:first-child{margin-top:0}
+  .lesson-detail p{font-size:15px}
+  .lesson-detail .mn{font-style:italic;color:var(--muted)}
+  .lesson-detail .big-ans{font-size:20px;font-weight:700}
+  .lesson-nav{max-width:560px;margin:14px auto 0;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .lnav-hint{font-size:12px;color:var(--muted)}
+
+  .answer{background:var(--card);padding:16px 18px 22px}
+  .answer .field{max-width:520px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+  .answer input{font-size:22px;text-align:center;padding:13px;border:2px solid var(--line);border-radius:8px;
+    width:100%;outline:none;transition:border-color .15s var(--ease-out-quart)}
+  .answer input:focus{border-color:var(--stem)}
+  .answer input.correct{background:color-mix(in srgb,var(--ok) 16%,var(--surface));border-color:var(--ok)}
+  .answer input.wrong{background:color-mix(in srgb,var(--bad) 16%,var(--surface));border-color:var(--bad)}
+  input::placeholder{color:var(--muted)}
+  .answer .hint{text-align:center;font-size:13px;color:var(--muted);min-height:18px}
+  .ansnext{display:none;margin:4px auto 0}
+  .ansnext.show{display:inline-flex}
+  .ansnext.correct{background:var(--ok);border-color:var(--ok);color:#fff}
+  .ansnext.wrong{background:var(--bad);border-color:var(--bad);color:#fff}
+  .info{max-width:560px;margin:14px auto 0;background:var(--subtle);border-radius:10px;padding:16px;display:none}
+  .info.show{display:block}
+  .info h4{font-size:12px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:10px 0 3px}
+  .info h4:first-child{margin-top:0}
+  .info p{font-size:15px}
+  .info .mn{font-style:italic;color:var(--muted)}
+
+  /* item modal */
+  .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:var(--z-modal);display:none;align-items:center;justify-content:center;padding:20px}
+  .modal.show{display:flex}
+  .sheet{background:var(--card);border-radius:14px;max-width:480px;width:100%;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.3)}
+  .sheet .top{padding:26px;text-align:center;color:#fff}
+  .sheet .top.stem{background:var(--stem)} .sheet .top.class{background:var(--class)} .sheet .top.drug{background:var(--drug)}
+  .sheet .top .big{font-size:42px;font-weight:800}
+  .sheet .top .meaning{font-size:18px;margin-top:6px;font-weight:600}
+  .sheet .body{padding:20px 24px 24px}
+  .sheet .body h4{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin:14px 0 3px}
+  .sheet .body h4:first-child{margin-top:0}
+  .sheet .body p{font-size:15px}
+  .sheet .body .mn{font-style:italic;color:var(--muted)}
+  .sheet .close{display:block;width:100%;border:none;border-top:1px solid var(--line);background:var(--subtle);color:var(--ink);padding:14px;font-weight:700;cursor:pointer;font-size:15px;font-family:inherit}
+  .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff;margin-top:8px}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#2b2b2b;color:#fff;
+    padding:12px 20px;border-radius:24px;font-size:14px;z-index:var(--z-toast);opacity:0;transition:opacity .3s;pointer-events:none}
+  .toast.show{opacity:1}
+  .dash-foot{display:flex;justify-content:space-between;align-items:center;gap:var(--s3);
+    margin-top:var(--s7);padding-top:var(--s4);border-top:1px solid var(--line);font-size:12px;color:var(--muted)}
+  /* ===== Motion: calm, state-conveying ===== */
+  @keyframes overlayIn{from{opacity:0}}
+  @keyframes sheetIn{from{opacity:0;transform:translateY(10px) scale(.985)}}
+  @keyframes revealUp{from{opacity:0;transform:translateY(-4px)}}
+  @keyframes riseIn{from{opacity:0;transform:translateY(6px)}}
+  @keyframes pillPop{from{opacity:0;transform:scale(.92)}}
+  @keyframes chipPulse{0%{transform:scale(1)}40%{transform:scale(1.12)}100%{transform:scale(1)}}
+
+  /* hover lift on tappable chips */
+  .chip:not(.locked){transition:transform .12s var(--ease-out-quart),box-shadow .12s var(--ease-out-quart)}
+  .chip:not(.locked):hover{transform:translateY(-2px);box-shadow:0 4px 10px rgba(0,0,0,.16)}
+
+  /* overlay + sheet entrances */
+  .session.show{animation:overlayIn .2s var(--ease-out-quart)}
+  .modal.show{animation:overlayIn .15s var(--ease-out-quart)}
+  .modal.show .sheet{animation:sheetIn .24s var(--ease-out-quart)}
+  .login.show .login-card{animation:sheetIn .26s var(--ease-out-quart)}
+
+  /* answer feedback reveals */
+  .info.show{animation:revealUp .22s var(--ease-out-quart)}
+  .ansnext.show{animation:riseIn .18s var(--ease-out-quart)}
+
+  /* tab crossfade */
+  .wrap.tab-in{animation:overlayIn .18s var(--ease-out-quart)}
+
+  /* level-up moment */
+  .sum-level .up{animation:pillPop .42s var(--ease-out-quint)}
+  #hdrLevel.levelup{animation:chipPulse .5s var(--ease-out-quint)}
+
+  @media(max-width:560px){
+    .today-headline{font-size:24px}
+    .today-actions{flex-direction:column;align-items:stretch}
+    .today-actions .btn{justify-content:center}
+    .prompt .big{font-size:40px}
+    .lvlbreak{grid-template-columns:1fr}
+    .spread-stage{font-size:13px}
+    .spill{min-width:34px;padding:4px 6px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      animation-duration:.01ms !important;animation-iteration-count:1 !important;
+      transition-duration:.01ms !important;scroll-behavior:auto !important}
+  }
+</style>
+</head>
+<body>
+
+<!-- NekoPharm logo (reusable) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="nekoMark" viewBox="0 0 128 112">
+    <circle cx="66" cy="56" r="48" fill="#eaf3fb" stroke="#74add8" stroke-width="4"/>
+    <path d="M92,28 l9,5.2 v10.4 l-9,5.2 l-9,-5.2 v-10.4 z" fill="none" stroke="#e8589e" stroke-width="3" stroke-linejoin="round"/>
+    <circle cx="105" cy="22" r="3.2" fill="#e8589e"/>
+    <line x1="101.5" y1="24" x2="98" y2="29.5" stroke="#e8589e" stroke-width="3"/>
+    <circle cx="79" cy="50" r="3.2" fill="#e8589e"/>
+    <line x1="82" y1="48" x2="85" y2="43" stroke="#e8589e" stroke-width="3"/>
+    <g fill="#6c9bc4">
+      <path d="M42,40 L39,25 L53,37 Z"/>
+      <path d="M64,40 L67,25 L53,37 Z"/>
+      <path d="M30,92 Q30,60 53,60 Q76,60 76,92 Z"/>
+      <circle cx="53" cy="48" r="16"/>
+    </g>
+    <path d="M44,38 L43,30 L50,37 Z" fill="#f3a6c8"/>
+    <path d="M62,38 L63,30 L56,37 Z" fill="#f3a6c8"/>
+    <circle cx="47" cy="48" r="2.2" fill="#2f4a63"/>
+    <circle cx="59" cy="48" r="2.2" fill="#2f4a63"/>
+    <path d="M51,53 L55,53 L53,56 Z" fill="#2f4a63"/>
+    <path d="M31,84 q-13,5 -5,-13" fill="none" stroke="#6c9bc4" stroke-width="6" stroke-linecap="round"/>
+    <ellipse cx="90" cy="70" rx="18" ry="5" fill="#ef8cbf"/>
+    <path d="M72,70 a18,15 0 0 0 36,0 z" fill="#f5a9cf"/>
+    <rect x="85" y="90" width="10" height="3.5" rx="1.7" fill="#ef8cbf"/>
+    <line x1="103" y1="46" x2="90" y2="66" stroke="#ef8cbf" stroke-width="5.5" stroke-linecap="round"/>
+    <circle cx="104" cy="45" r="5" fill="#ef8cbf"/>
+    <path d="M80,76 h6 M83,73 v6" stroke="#d23f86" stroke-width="2.6" stroke-linecap="round"/>
+    <rect x="92" y="74" width="11" height="6" rx="3" fill="#ffffff" stroke="#d23f86" stroke-width="1.6" transform="rotate(28 97 77)"/>
+  </symbol>
+</svg>
+
+<header>
+  <a class="logo" href="#" onclick="return false"><svg class="logo-mark" viewBox="0 0 128 112"><use href="#nekoMark"/></svg><span class="logo-txt">Neko<b>Pharm</b></span></a>
+  <nav>
+    <button data-tab="dash" class="active">Dashboard</button>
+    <button data-tab="levels">Levels</button>
+    <button data-tab="browse">Browse</button>
+  </nav>
+  <div class="spacer"></div>
+  <button id="themeBtn" class="icon-btn on-dark" title="Toggle dark mode" aria-label="Toggle dark mode">☾</button>
+  <button id="kbBtn" class="icon-btn on-dark" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨</button>
+  <div class="lvl" id="hdrLevel">Level 1</div>
+  <div class="userchip"><span id="syncStat" class="syncstat" title="Cloud sync status"></span><span id="userName">Guest</span><button id="logoutBtn" title="Log out">⎋</button></div>
+</header>
+
+<div class="wrap" id="dash">
+  <section class="today">
+    <p class="today-greet" id="greet">Welcome back 👋</p>
+    <h1 class="today-headline" id="todayHeadline">Loading…</h1>
+    <p class="today-sub" id="todaySub"></p>
+    <div class="today-actions">
+      <button class="btn btn-primary" id="btnReviews"><img class="btn-img" src="art/mascot.png" alt="" onerror="this.remove()"><span class="btn-label">Start reviews <kbd>R</kbd></span></button>
+      <button class="btn btn-secondary" id="btnLessons"><img class="btn-img" src="art/lesson.png" alt="" onerror="this.remove()"><span class="btn-label">Lessons <kbd>L</kbd></span></button>
+    </div>
+    <div class="quickrow" id="quickRow">
+      <span class="quicklabel">Quick practice</span>
+      <button class="btn btn-secondary btn-sm" id="qMeaning"><b id="qMeaningN">0</b> Meaning</button>
+      <button class="btn btn-secondary btn-sm" id="qReading"><b id="qReadingN">0</b> Reading</button>
+      <span class="quicknote">doesn’t change SRS</span>
+    </div>
+  </section>
+
+  <section class="forecast" id="forecastWrap">
+    <h2 class="dash-h">Coming up <span class="dash-h-sub" id="fcHead"></span></h2>
+    <div class="forecast-list" id="forecastList"></div>
+  </section>
+
+  <section class="levelnow">
+    <div class="levelnow-head">
+      <div class="levelnav">
+        <button class="icon-btn" id="lvlPrev" aria-label="Previous level" title="Previous level">‹</button>
+        <span class="levelnow-title">Level <span id="curLevel">1</span></span>
+        <button class="icon-btn" id="lvlNext" aria-label="Next level" title="Next level">›</button>
+      </div>
+      <span class="levelnow-sub" id="levelnowSub"></span>
+    </div>
+    <div class="lvlbreak" id="lvlBreak"></div>
+    <div class="tickbar" id="tickBar"></div>
+  </section>
+
+  <section class="spread">
+    <div class="spread-head">
+      <h2 class="dash-h" style="margin:0">Item spread <span class="dash-h-sub" id="srsTotal"></span></h2>
+      <div class="spread-legend">
+        <span><i class="tier-badge stem">S</i>Stems</span>
+        <span><i class="tier-badge class">C</i>Classes</span>
+        <span><i class="tier-badge drug">D</i>Drugs</span>
+      </div>
+    </div>
+    <div id="spreadRows"></div>
+  </section>
+
+  <div class="dash-cards">
+    <section class="dcard">
+      <h3>🔓 Recently unlocked</h3>
+      <p class="sub">Items you started in the last 30 days.</p>
+      <div class="chipwrap" id="recentUnlocked"></div>
+    </section>
+    <section class="dcard">
+      <h3>⚠ Critical items <span class="dash-h-sub" id="critSub"></span></h3>
+      <p class="sub">Under 75% correct, worth extra study.</p>
+      <div class="chipwrap" id="criticalList"></div>
+      <button class="btn btn-secondary btn-sm" id="studyCritical" style="margin-top:var(--s3);display:none">Drill these <kbd>C</kbd></button>
+    </section>
+    <section class="dcard">
+      <h3>🔥 Recently burned</h3>
+      <p class="sub">Items you burned in the last 30 days.</p>
+      <div class="chipwrap" id="recentBurned"></div>
+    </section>
+  </div>
+
+  <footer class="dash-foot">
+    <span>NekoPharm · prototype</span>
+    <button class="btn btn-danger btn-sm" id="resetBtn">Reset progress</button>
+  </footer>
+</div>
+
+<div class="wrap" id="levels" style="display:none">
+  <div class="legend">
+    <span><i style="background:var(--stem)"></i>Stem (affix)</span>
+    <span><i style="background:var(--class)"></i>Drug class</span>
+    <span><i style="background:var(--drug)"></i>Drug</span>
+    <span><i style="background:#c7c7c7"></i>Locked</span>
+  </div>
+  <div class="levels" id="levelList"></div>
+</div>
+
+<div class="wrap" id="browse" style="display:none">
+  <div class="searchbar">
+    <span class="ico">🔍</span>
+    <input id="searchInput" type="text" autocomplete="off" placeholder="Search drugs, classes, stems, effects… (e.g. MRSA, beta blocker, nephrotoxicity)">
+  </div>
+  <div class="legend">
+    <span><i style="background:var(--stem)"></i>Stem</span>
+    <span><i style="background:var(--class)"></i>Class</span>
+    <span><i style="background:var(--drug)"></i>Drug</span>
+    <span>Tap an item for details. Keyboard: <kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear.</span>
+  </div>
+  <div id="browseList"></div>
+</div>
+
+<!-- Login overlay -->
+<div class="login" id="login">
+  <div class="login-card">
+    <svg class="login-mark" viewBox="0 0 128 112"><use href="#nekoMark"/></svg>
+    <div class="login-logo">Neko<span>Pharm</span></div>
+    <p class="login-tag">Understand. Learn. Master pharmacology.</p>
+    <div id="gwrap">
+      <div id="gbtn"></div>
+      <div id="gnote" class="gnote"></div>
+      <div class="login-or"><span>or use a local profile</span></div>
+    </div>
+    <input id="loginUser" type="text" autocomplete="username" placeholder="Username" spellcheck="false">
+    <input id="loginPass" type="password" autocomplete="current-password" placeholder="Password">
+    <div class="login-err" id="loginErr"></div>
+    <div class="login-btns">
+      <button class="btn btn-primary" id="loginInBtn">Log in</button>
+      <button class="btn btn-secondary" id="loginUpBtn">Create account</button>
+    </div>
+    <button class="login-guest" id="loginGuest">Continue as guest →</button>
+    <p class="login-note">Sign in with Google to save progress to your account and sync across devices. Local profiles &amp; guest are stored only in this browser — don’t reuse an important password.</p>
+  </div>
+</div>
+
+<!-- Lesson teaching (reading-before-lesson) -->
+<div class="session" id="lesson">
+  <div class="s-top"><div class="bar" id="lessonBar"></div></div>
+  <div class="s-bar2">
+    <span>Lesson</span>
+    <span id="lessonCounter">0 / 0</span>
+    <button id="lessonQuit" class="icon-btn" title="Close" aria-label="Close lesson">✕</button>
+  </div>
+  <div class="prompt stem" id="lessonPrompt">
+    <div class="type" id="lpType">Stem</div>
+    <div class="big" id="lpBig">·</div>
+    <div class="ask" id="lpSub">Meaning</div>
+  </div>
+  <div class="lesson-body">
+    <div class="lesson-detail" id="lpDetail"></div>
+    <div class="lesson-nav">
+      <button class="btn btn-secondary" id="lpPrev">← Back</button>
+      <span class="lnav-hint">← → to move · Enter to continue</span>
+      <button class="btn btn-primary" id="lpNext">Next →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Review/Lesson session -->
+<div class="session" id="session">
+  <div class="s-top"><div class="bar" id="progBar"></div></div>
+  <div class="s-bar2">
+    <span id="sMode">Reviews</span>
+    <span id="sCounter">0 / 0</span>
+    <button id="sQuit" class="icon-btn" title="Quit" aria-label="Quit session">✕</button>
+  </div>
+  <div class="prompt stem" id="prompt">
+    <div class="type" id="pType">Stem</div>
+    <div class="big" id="pBig">·</div>
+    <div class="ask" id="pAsk">Meaning</div>
+  </div>
+  <div class="answer">
+    <div class="field">
+      <input id="ansInput" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Type your answer…">
+      <div class="hint" id="ansHint"></div>
+      <button id="ansNext" class="btn ansnext">Next →</button>
+    </div>
+    <div class="info" id="ansInfo"></div>
+  </div>
+</div>
+
+<!-- Session wrap-up summary -->
+<div class="session" id="summary">
+  <div class="sum-wrap">
+    <h2 id="sumTitle">Session complete 🎉</h2>
+    <div class="sum-stats">
+      <div class="sum-stat"><div class="n" id="sumItems">0</div><div class="t">Items</div></div>
+      <div class="sum-stat ok"><div class="n" id="sumCorrect">0</div><div class="t">Correct</div></div>
+      <div class="sum-stat bad"><div class="n" id="sumWrong">0</div><div class="t">Missed</div></div>
+      <div class="sum-stat"><div class="n" id="sumAcc">0%</div><div class="t">Accuracy</div></div>
+    </div>
+    <div id="sumLevel" class="sum-level"></div>
+    <div id="sumMissWrap" style="display:none">
+      <h3 class="sum-h3">Items to revisit</h3>
+      <div id="sumMissList" class="sum-miss"></div>
+    </div>
+    <div class="sum-actions">
+      <button class="btn btn-secondary" id="sumDone">Back to dashboard</button>
+      <button class="btn btn-primary" id="sumRedo" style="display:none">Drill missed items</button>
+    </div>
+  </div>
+</div>
+
+<!-- Item detail modal -->
+<div class="modal" id="modal">
+  <div class="sheet">
+    <div class="top" id="mTop">
+      <div class="big" id="mBig">·</div>
+      <div class="meaning" id="mMeaning">·</div>
+      <div class="badge" id="mBadge"></div>
+    </div>
+    <div class="body" id="mBody"></div>
+    <button class="close" id="mClose">Close</button>
+  </div>
+</div>
+
+<!-- Keyboard shortcuts help -->
+<div class="modal" id="kbhelp">
+  <div class="sheet kbsheet">
+    <div class="top stem"><div class="big" style="font-size:30px">⌨ Keyboard shortcuts</div></div>
+    <div class="body">
+      <h4>Anywhere</h4>
+      <div class="kbrow"><kbd>?</kbd><span>Open / close this help</span></div>
+      <div class="kbrow"><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><span>Switch tabs: Dashboard · Levels · Browse</span></div>
+      <h4>Dashboard</h4>
+      <div class="kbrow"><kbd>L</kbd><span>Start Lessons</span></div>
+      <div class="kbrow"><kbd>R</kbd><span>Start Reviews</span></div>
+      <div class="kbrow"><kbd>M</kbd><span>Quick review, meaning only</span></div>
+      <div class="kbrow"><kbd>K</kbd><span>Quick review, reading only</span></div>
+      <div class="kbrow"><kbd>C</kbd><span>Study critical items</span></div>
+      <h4>During a lesson reading</h4>
+      <div class="kbrow"><kbd>←</kbd><kbd>→</kbd><span>Previous / next item</span></div>
+      <div class="kbrow"><kbd>Enter</kbd><kbd>Space</kbd><span>Continue (start quiz on last card)</span></div>
+      <div class="kbrow"><kbd>Esc</kbd><span>Close the lesson</span></div>
+      <h4>During a quiz (lessons & reviews)</h4>
+      <div class="kbrow"><kbd>Enter</kbd><span>Submit answer, then advance (Next)</span></div>
+      <div class="kbrow"><kbd>Esc</kbd><span>Quit to the summary</span></div>
+      <h4>Browse</h4>
+      <div class="kbrow"><kbd>/</kbd><span>Jump to search</span></div>
+      <div class="kbrow"><kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd><span>Move between items</span></div>
+      <div class="kbrow"><kbd>Enter</kbd><span>Open the focused item</span></div>
+      <div class="kbrow"><kbd>Esc</kbd><span>Clear search</span></div>
+      <h4>Summary</h4>
+      <div class="kbrow"><kbd>Enter</kbd><span>Back to dashboard</span></div>
+      <div class="kbrow"><kbd>R</kbd><span>Drill missed items</span></div>
+    </div>
+    <button class="close" id="kbClose">Close</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<!-- Firebase (optional cloud sync). Loads only the compat SDKs we use; if these
+     fail to load (offline) the app falls back to local-only storage. -->
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+<script src="wanipharm-data.js"></script>
+<script>
+/* ============================================================
+   NekoPharm — content + SRS engine (single file, no deps)
+   ============================================================ */
+
+/* ---- SRS configuration (WaniKani-style stages) ---- */
+const STAGES = [
+  {name:'Locked',      grp:'locked',      hours:0},
+  {name:'Apprentice 1',grp:'apprentice',  hours:4},
+  {name:'Apprentice 2',grp:'apprentice',  hours:8},
+  {name:'Apprentice 3',grp:'apprentice',  hours:24},
+  {name:'Apprentice 4',grp:'apprentice',  hours:48},
+  {name:'Guru 1',      grp:'guru',        hours:168},     // 1w
+  {name:'Guru 2',      grp:'guru',        hours:336},     // 2w
+  {name:'Master',      grp:'master',      hours:720},     // 1mo
+  {name:'Enlightened', grp:'enlightened', hours:2880},    // 4mo
+  {name:'Burned',      grp:'burned',      hours:Infinity}
+];
+const LESSON_STAGE = 1;        // after a lesson, item enters Apprentice 1 queue
+const GURU_STAGE   = 5;        // reaching this unlocks dependents
+const PASS_TO_ADVANCE = true;  // simple model: correct = +1 stage, wrong = drop
+
+/* ---- Content is loaded from wanipharm-data.js (derived from ./database) ---- */
+const ITEMS = (window.WANIPHARM_DATA || []);
+if(!ITEMS.length){
+  document.body.innerHTML='<div style="max-width:560px;margin:80px auto;font-family:sans-serif;padding:24px;text-align:center">'+
+    '<h2>Curriculum data not found</h2><p>Make sure <code>wanipharm-data.js</code> is in the same folder as this file, then reopen.</p></div>';
+  throw new Error('WANIPHARM_DATA missing');
+}
+
+/* ---- index helpers ---- */
+const byId = {};
+ITEMS.forEach(i=>byId[i.id]=i);
+const MAX_LEVEL = Math.max(...ITEMS.map(i=>i.level));
+
+/* ============================================================
+   State persistence
+   ============================================================ */
+let currentUser = null;                 // set by the auth layer before bootApp()
+function userKey(){ return 'wanipharm_state_' + (currentUser||'guest'); }
+let state = { level:1, items:{} };      // replaced by load() in bootApp()
+
+function load(){
+  try{
+    const raw = localStorage.getItem(userKey());
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return { level:1, items:{} };
+  // items[id] = { stage, due, right, wrong }   right/wrong = lifetime review answers
+}
+function save(){ try{ localStorage.setItem(userKey(), JSON.stringify(state)); }catch(e){} cloudPush(); }
+
+/* ============================================================
+   Cloud sync (Firebase Firestore) — layered on top of local storage.
+   Local username/password profiles and guest stay 100% local and unchanged.
+   Google sign-in additionally authenticates with Firebase (re-using the same
+   Google credential), which unlocks secure per-account progress sync that
+   survives across devices and browsers. If Firebase isn't configured or the
+   network is down, everything silently falls back to the local-only behaviour.
+   ============================================================ */
+let fbAuth = null, fbDB = null;     // Firebase handles once initialised
+let cloudReady = false;             // SDK loaded + config present
+let cloudUid = null;                // set when the current user is cloud-synced
+let cloudPushT = null, syncStatT = null;
+
+function cloudConfigured(){
+  return !!(window.firebase && FIREBASE_CONFIG && FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId);
+}
+function initFirebase(){
+  if(cloudReady) return true;
+  if(!cloudConfigured()) return false;
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(FIREBASE_CONFIG);
+    fbAuth = firebase.auth();
+    fbDB   = firebase.firestore();
+    cloudReady = true;
+  }catch(e){ console.warn('Firebase init failed', e); cloudReady = false; }
+  return cloudReady;
+}
+function cloudDoc(){ return fbDB.collection('progress').doc(cloudUid); }
+
+/* small, unobtrusive sync indicator in the user chip */
+function setSync(kind){
+  const el = $('#syncStat'); if(!el) return;
+  if(!cloudUid){ el.classList.remove('show'); return; }
+  const map = { sync:'⟳ Syncing…', ok:'✓ Synced', err:'⚠ Sync offline' };
+  el.textContent = map[kind] || '';
+  el.classList.add('show');
+  clearTimeout(syncStatT);
+  if(kind==='ok') syncStatT = setTimeout(()=>el.classList.remove('show'), 2500);
+}
+
+/* Merge two state snapshots without losing progress on either side.
+   Per item we keep the more-advanced record (higher SRS stage; tie-break on
+   review volume, then latest due), and keep the earliest learned/burned dates. */
+function mergeState(a, b){
+  a = a || {level:1, items:{}};  b = b || {level:1, items:{}};
+  const ai = a.items||{}, bi = b.items||{};
+  const out = { level: Math.max(a.level||1, b.level||1), items: {} };
+  const ids = new Set([...Object.keys(ai), ...Object.keys(bi)]);
+  ids.forEach(id=>{
+    const x = ai[id], y = bi[id];
+    if(!x){ out.items[id] = y; return; }
+    if(!y){ out.items[id] = x; return; }
+    const volX = (x.right||0)+(x.wrong||0), volY = (y.right||0)+(y.wrong||0);
+    let win, lose;
+    if((x.stage||0) !== (y.stage||0)){ win = (x.stage||0) > (y.stage||0) ? x : y; }
+    else if(volX !== volY){ win = volX > volY ? x : y; }
+    else { win = (x.due||0) >= (y.due||0) ? x : y; }
+    lose = win === x ? y : x;
+    const rec = Object.assign({}, lose, win);   // winner's fields take precedence
+    const la = Math.min(x.learnedAt||Infinity, y.learnedAt||Infinity);
+    if(isFinite(la)) rec.learnedAt = la;
+    const ba = (x.burnedAt && y.burnedAt) ? Math.min(x.burnedAt, y.burnedAt) : (x.burnedAt || y.burnedAt);
+    if(ba) rec.burnedAt = ba;
+    out.items[id] = rec;
+  });
+  return out;
+}
+
+async function cloudPull(){
+  if(!cloudUid) return null;
+  try{
+    const snap = await cloudDoc().get();
+    if(snap.exists){ const d = snap.data(); return d && d.state ? d.state : null; }
+  }catch(e){ console.warn('cloud pull failed', e); setSync('err'); }
+  return null;
+}
+/* debounced push of the current state to the cloud */
+function cloudPush(){
+  if(!cloudUid) return;
+  setSync('sync');
+  clearTimeout(cloudPushT);
+  cloudPushT = setTimeout(()=>{
+    try{
+      cloudDoc().set({ state: state, lastSaved: Date.now(), name: getDisplayName(currentUser) }, {merge:true})
+        .then(()=>setSync('ok'))
+        .catch(e=>{ console.warn('cloud push failed', e); setSync('err'); });
+    }catch(e){ console.warn('cloud push failed', e); setSync('err'); }
+  }, 1200);
+}
+/* one-time reconcile after a cloud user is established: pull, merge, re-save */
+async function startCloudSync(){
+  if(!cloudUid) return;
+  setSync('sync');
+  const cloud = await cloudPull();
+  state = mergeState(state, cloud);
+  maybeLevelUp();
+  save();          // persists locally AND pushes the merged result up
+  renderAll();
+  setSync('ok');
+}
+
+/* ============================================================
+   SRS logic
+   ============================================================ */
+function now(){ return Date.now(); }
+
+function itemState(id){
+  return state.items[id] || {stage:0, due:0};
+}
+function stageGroup(id){
+  return STAGES[itemState(id).stage].grp;
+}
+function isUnlocked(item){
+  // unlocked when all requirements are at Guru+ (stage>=GURU_STAGE)
+  return item.requires.every(r=> itemState(r).stage >= GURU_STAGE);
+}
+function isAvailableLesson(item){
+  // unlocked, in current/past level, and not yet started
+  return item.level <= state.level && isUnlocked(item) && itemState(item.id).stage===0;
+}
+function lessonsQueue(){ return ITEMS.filter(isAvailableLesson); }
+function reviewsQueue(){
+  const t = now();
+  return ITEMS.filter(i=>{
+    const s = itemState(i.id);
+    return s.stage>=1 && s.stage<STAGES.length-1 && s.due<=t;
+  });
+}
+
+function advance(id, correct){
+  const s = itemState(id);
+  let stage = s.stage;
+  if(correct){ stage = Math.min(stage+1, STAGES.length-1); }
+  else { stage = Math.max(stage-1, 1); } // never below Apprentice 1 once learned
+  const hrs = STAGES[stage].hours;
+  const due = hrs===Infinity ? Infinity : now()+hrs*3600*1000;
+  const rec = Object.assign({}, state.items[id], {stage, due});
+  if(stage===STAGES.length-1 && !rec.burnedAt) rec.burnedAt = now();   // first time burned
+  state.items[id] = rec;
+  save();
+}
+function learn(id){
+  state.items[id] = Object.assign({right:0,wrong:0,learnedAt:now()}, state.items[id],
+    {stage:LESSON_STAGE, due: now()+STAGES[LESSON_STAGE].hours*3600*1000, learnedAt: (state.items[id]&&state.items[id].learnedAt)||now()});
+  save();
+  maybeLevelUp();
+}
+/* items reviewed >=3 times with <75% correct — the WaniKani "critical" idea */
+function criticalItems(){
+  return ITEMS.map(i=>{
+    const s=state.items[i.id]; if(!s) return null;
+    const tot=(s.right||0)+(s.wrong||0);
+    if(s.stage<1 || s.stage>=STAGES.length-1 || tot<3) return null;
+    const acc=s.right/tot;
+    return acc<0.75 ? {item:i, acc, tot} : null;
+  }).filter(Boolean).sort((a,b)=>a.acc-b.acc).slice(0,12);
+}
+/* ---- WaniKani-style dashboard data ---- */
+function srsSpread(){
+  const groups=['apprentice','guru','master','enlightened','burned'];
+  const out={}; groups.forEach(g=>out[g]={stem:0,class:0,drug:0,total:0});
+  ITEMS.forEach(i=>{ const g=stageGroup(i.id); if(out[g]){ out[g][i.type]++; out[g].total++; } });
+  return out;
+}
+function levelTypeProgress(L){
+  const out={};
+  ['stem','class','drug'].forEach(tp=>{
+    const items=ITEMS.filter(i=>i.level===L && i.type===tp);
+    out[tp]={ guru:items.filter(i=>itemState(i.id).stage>=GURU_STAGE).length, total:items.length };
+  });
+  return out;
+}
+function recentItems(field, days){
+  const cutoff=now()-days*86400000;
+  return ITEMS.filter(i=>{ const s=state.items[i.id]; return s && s[field] && s[field]>=cutoff; })
+              .sort((a,b)=>state.items[b.id][field]-state.items[a.id][field]);
+}
+function forecast(){
+  const t=now(); const ups=[];
+  ITEMS.forEach(i=>{ const s=state.items[i.id];
+    if(s && s.stage>=1 && s.stage<STAGES.length-1 && s.due>t) ups.push(s.due); });
+  ups.sort((a,b)=>a-b);
+  const next24=ups.filter(d=>d-t<=86400000).length;
+  const buckets=[]; const idx={};
+  ups.forEach(d=>{ const lbl=relTime(d);
+    if(idx[lbl]===undefined){ idx[lbl]=buckets.length; buckets.push({label:lbl,n:0}); }
+    buckets[idx[lbl]].n++; });
+  return { next24, total:ups.length, buckets:buckets.slice(0,7) };
+}
+/* level up: when all of current level's stems+classes reach Guru, advance level */
+function maybeLevelUp(){
+  while(state.level < MAX_LEVEL){
+    const core = ITEMS.filter(i=>i.level===state.level && i.type!=='drug');
+    const done = core.every(i=> itemState(i.id).stage >= GURU_STAGE);
+    if(done) state.level++; else break;
+  }
+  save();
+}
+
+/* ============================================================
+   Rendering
+   ============================================================ */
+const $ = s=>document.querySelector(s);
+const $$ = s=>document.querySelectorAll(s);
+let levelView=null;   // which level the Level-progress widget is showing (null = current)
+
+/* SRS stage badge: colour + first-letter glyph (A/G/M/E/B) so stage is
+   legible without relying on colour alone. */
+function stageDot(id){
+  const st=itemState(id); if(st.stage<1) return '';
+  const g=STAGES[st.stage].grp;
+  return `<span class="dot ${g}">${g.charAt(0).toUpperCase()}</span>`;
+}
+function chipTitle(i){
+  const st=itemState(i.id);
+  const stage = st.stage>=1 ? STAGES[st.stage].name : 'Not started';
+  const tier = i.type.charAt(0).toUpperCase()+i.type.slice(1);
+  return `${i.char} · ${tier} · ${stage}`;
+}
+function chipHTML(i, extra){
+  return `<div class="chip ${i.type}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}${extra||''}">${i.char}${stageDot(i.id)}</div>`;
+}
+/* fill a .chipwrap with item chips (capped, with a "+N more" -> Browse) */
+function fillChips(elId, items, emptyMsg, titleFn, emptyArt){
+  const c=$('#'+elId);
+  if(!items.length){
+    c.innerHTML=`<div class="empty">`+
+      (emptyArt?`<img class="empty-art" src="${emptyArt}" alt="" onerror="this.remove()">`:'')+
+      `<span>${emptyMsg}</span></div>`;
+    return;
+  }
+  const cap=15, shown=items.slice(0,cap);
+  c.innerHTML = shown.map(i=>chipHTML(i, titleFn?titleFn(i):'')).join('')
+    + (items.length>cap ? `<button class="chip-more">+${items.length-cap} more</button>` : '');
+  $$('#'+elId+' .chip[data-item]').forEach(ch=>{
+    ch.onclick=()=>openModal(ch.dataset.item);
+    ch.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openModal(ch.dataset.item); } };
+  });
+  const more=$('#'+elId+' .chip-more'); if(more) more.onclick=()=>switchTab('browse');
+}
+
+function relTime(ms){
+  const d=ms-now(); if(d<=0) return 'now';
+  const m=Math.round(d/60000);
+  if(m<60) return 'in '+m+' min';
+  const h=Math.round(m/60); if(h<24) return h===1?'in 1 hour':'in '+h+' hours';
+  const days=Math.round(h/24); return days===1?'tomorrow':'in '+days+' days';
+}
+function nextDueTime(){
+  const t=now(); let best=Infinity;
+  ITEMS.forEach(i=>{ const s=state.items[i.id];
+    if(s && s.stage>=1 && s.stage<STAGES.length-1 && s.due>t && s.due<best) best=s.due; });
+  return best===Infinity?null:best;
+}
+function renderDashboard(){
+  $('#hdrLevel').textContent = 'Level '+state.level;
+  $('#curLevel').textContent = state.level;
+  const lq = lessonsQueue(), rq = reviewsQueue();
+  const rv = rq.length, ls = lq.length;
+
+  // ---- hero: lead with the day's work, one primary action ----
+  const bR=$('#btnReviews'), bL=$('#btnLessons'), hl=$('#todayHeadline'), sub=$('#todaySub');
+  bR.toggleAttribute('disabled', rv===0);
+  bL.toggleAttribute('disabled', ls===0);
+  const setPrimary = btn=>{ [bR,bL].forEach(b=>{ b.classList.remove('btn-primary'); b.classList.add('btn-secondary'); });
+    btn.classList.remove('btn-secondary'); btn.classList.add('btn-primary'); };
+  if(rv>0){
+    hl.innerHTML=`<span class="hl">${rv}</span> review${rv>1?'s':''} ready`;
+    sub.textContent = ls>0 ? `${ls} new lesson${ls>1?'s':''} waiting too.` : 'Clear your queue to keep the momentum going.';
+    setPrimary(bR);
+  }else if(ls>0){
+    hl.innerHTML=`<span class="hl">${ls}</span> lesson${ls>1?'s':''} to learn`;
+    const nd=nextDueTime();
+    sub.textContent = nd ? `Reviews resume ${relTime(nd)}.` : 'Learn these, and reviews will follow.';
+    setPrimary(bL);
+  }else{
+    hl.textContent='You’re all caught up';
+    const nd=nextDueTime();
+    sub.textContent = nd ? `Next review ${relTime(nd)}.` : 'Nothing scheduled. New lessons unlock as you level up.';
+    setPrimary(bR);
+  }
+
+  // ---- quick practice (only meaningful when reviews are due) ----
+  const dueReading = rq.filter(i=>i.reading).length;
+  $('#qMeaningN').textContent = rv;
+  $('#qReadingN').textContent = dueReading;
+  $('#qMeaning').toggleAttribute('disabled', rv===0);
+  $('#qReading').toggleAttribute('disabled', dueReading===0);
+  $('#quickRow').style.display = rv>0 ? 'flex' : 'none';
+
+  // ---- review forecast ----
+  const fc=forecast();
+  if(fc.total){
+    $('#fcHead').textContent = fc.next24 ? `+${fc.next24} in the next 24h` : `${fc.total} upcoming`;
+    const max=Math.max(...fc.buckets.map(b=>b.n),1);
+    $('#forecastList').innerHTML = fc.buckets.map(b=>
+      `<div class="fc-row"><span class="fc-when">${b.label}</span>`+
+      `<span class="fc-bar"><i style="transform:scaleX(${(b.n/max).toFixed(3)})"></i></span>`+
+      `<span class="fc-n">${b.n}</span></div>`).join('');
+  }else{
+    $('#fcHead').textContent='';
+    $('#forecastList').innerHTML='<p class="fc-empty">No reviews scheduled yet. Learn some lessons to start the clock.</p>';
+  }
+
+  // ---- level progress breakdown + tick bar (navigable) ----
+  if(levelView==null) levelView=state.level;
+  levelView=Math.max(1,Math.min(MAX_LEVEL,levelView));
+  const vLevel=levelView;
+  $('#curLevel').textContent=vLevel;
+  $('#lvlPrev').toggleAttribute('disabled', vLevel<=1);
+  $('#lvlNext').toggleAttribute('disabled', vLevel>=MAX_LEVEL);
+  const ltp=levelTypeProgress(vLevel);
+  const tierLetter={stem:'S',class:'C',drug:'D'}, tierName={stem:'Stems',class:'Classes',drug:'Drugs'};
+  $('#lvlBreak').innerHTML=['stem','class','drug'].map(tp=>{
+    const d=ltp[tp];
+    return `<div class="lvlcard">
+      <div class="lh"><i class="tier-badge ${tp}">${tierLetter[tp]}</i>${tierName[tp]}</div>
+      <div class="lrow"><span class="lcount">${d.guru}<small>/${d.total}</small></span>
+        <button class="btn btn-secondary btn-sm lsee" data-level="${vLevel}">See all ›</button></div>
+    </div>`;
+  }).join('');
+  $$('#lvlBreak .lsee').forEach(b=>b.onclick=()=>switchTab('levels'));
+  const core = ITEMS.filter(i=>i.level===vLevel && i.type!=='drug');
+  const guru = core.filter(i=>itemState(i.id).stage>=GURU_STAGE).length;
+  const remaining = core.length - guru;
+  let subMsg;
+  if(vLevel<state.level)      subMsg='Cleared ✓';
+  else if(vLevel>state.level) subMsg=`Locked. Reach Level ${vLevel} first`;
+  else if(vLevel>=MAX_LEVEL)  subMsg = remaining<=0 ? 'All levels complete 🎉' : `${guru} of ${core.length} core items Guru’d`;
+  else                        subMsg = remaining<=0 ? 'Ready to level up!' : `Guru ${remaining} more to reach Level ${vLevel+1}`;
+  $('#levelnowSub').textContent=subMsg;
+  $('#tickBar').innerHTML = core.map(i=>`<span class="tick${itemState(i.id).stage>=GURU_STAGE?' on':''}"></span>`).join('');
+
+  // ---- item spread (stages × tiers) ----
+  const sp=srsSpread();
+  const grandTotal = Object.keys(sp).reduce((a,g)=>a+sp[g].total,0);
+  $('#srsTotal').textContent = grandTotal ? `${grandTotal} learned` : '';
+  const stageRows=[['apprentice','Apprentice'],['guru','Guru'],['master','Master'],['enlightened','Enlightened'],['burned','Burned']];
+  $('#spreadRows').innerHTML = stageRows.map(([g,name])=>{
+    const r=sp[g];
+    const pill=tp=>`<span class="spill ${tp}${r[tp]===0?' zero':''}">${r[tp]}</span>`;
+    return `<div class="spread-row">
+      <span class="spread-stage"><span class="sdot ${g}">${name.charAt(0)}</span>${name}</span>
+      <span class="spread-pills">${pill('stem')}${pill('class')}${pill('drug')}<span class="spill total">${r.total}</span></span>
+    </div>`;
+  }).join('');
+
+  // ---- recently unlocked / critical / burned ----
+  fillChips('recentUnlocked', recentItems('learnedAt',30), 'Start a lesson to unlock your first items.');
+  fillChips('recentBurned', recentItems('burnedAt',30), 'Keep learning, we’ll tend to the fire.', null, 'art/burned.png');
+  const crit=criticalItems();
+  $('#critSub').textContent = crit.length ? crit.length : '';
+  fillChips('criticalList', crit.map(c=>c.item), 'No critical items. Nice work!',
+    i=>{ const c=crit.find(x=>x.item.id===i.id); return c?` · ${Math.round(c.acc*100)}% correct`:''; }, 'art/mistakes.png');
+  CRITICAL_ITEMS=crit.map(c=>c.item);
+  $('#studyCritical').style.display = crit.length ? 'inline-flex' : 'none';
+}
+
+function renderLevels(){
+  let html='';
+  for(let L=1; L<=MAX_LEVEL; L++){
+    const locked = L>state.level;
+    html+=`<div class="level-block"><div class="level-head">
+      <span class="pill ${locked?'locked':''}">Level ${L}</span>
+      <small>${locked?'Locked. Guru the previous level to unlock':'Stems → Classes → Drugs'}</small>
+    </div>`;
+    [['stem','Stems'],['class','Classes'],['drug','Drugs']].forEach(([tp,label])=>{
+      const items = ITEMS.filter(i=>i.level===L && i.type===tp);
+      if(!items.length) return;
+      html+=`<div class="sys-row"><span class="sys-label">${label}</span><div class="igrid">`;
+      items.forEach(i=>{
+        const unlocked = !locked && isUnlocked(i);
+        if(unlocked){
+          html+=`<div class="chip ${tp}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
+        }else{
+          html+=`<div class="chip locked" title="Locked. Guru its requirements first" aria-label="Locked">🔒</div>`;
+        }
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+  }
+  $('#levelList').innerHTML=html;
+  $$('#levelList .chip[data-item]').forEach(c=>{
+    c.onclick=()=>openModal(c.dataset.item);
+    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openModal(c.dataset.item); } };
+  });
+}
+
+/* ---- item modal ---- */
+function openModal(id){
+  const i = byId[id]; const st = itemState(id);
+  $('#mTop').className='top '+i.type;
+  $('#mBig').textContent=i.char;
+  $('#mMeaning').textContent=i.meaning[0].replace(/\b\w/g,c=>c.toUpperCase());
+  const badge=$('#mBadge');
+  if(st.stage>=1){ badge.style.display='inline-block'; badge.textContent=STAGES[st.stage].name;
+    badge.style.background=`var(--${STAGES[st.stage].grp})`; }
+  else { badge.style.display='inline-block'; badge.textContent='Not started'; badge.style.background='#999'; }
+  let body='';
+  if(i.reading){ body+=`<h4>Key fact</h4><p>${i.reading[0].replace(/\b\w/g,c=>c.toUpperCase())}</p>`;}
+  if(i.mnemonic){ body+=`<h4>Mnemonic</h4><p class="mn">${i.mnemonic}</p>`; }
+  body+=`<h4>Details</h4><p>${i.info}</p>`;
+  if(i.requires.length){ body+=`<h4>Built from</h4><p>${i.requires.map(r=>byId[r].char).join(', ')}</p>`; }
+  $('#mBody').innerHTML=body;
+  $('#modal').classList.add('show');
+}
+$('#mClose').onclick=()=>$('#modal').classList.remove('show');
+$('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove('show'); };
+
+/* ============================================================
+   Session (lessons + reviews)
+   ============================================================ */
+let session=null; // {mode, queue:[{item, qs:[...], idx}], done, total}
+
+function normalize(s){ return s.toLowerCase().trim().replace(/[-–—.]/g,'').replace(/\s+/g,' '); }
+function matches(input, accepted){
+  const n=normalize(input);
+  return accepted.some(a=>normalize(a)===n);
+}
+
+function buildQuestions(item, mode){
+  // Primary question depends on tier: stem=meaning, class=mechanism, drug=class.
+  const primaryAsk = item.type==='stem' ? 'Meaning'
+                   : item.type==='class' ? 'Mechanism / effect'
+                   : 'Class';
+  const qs=[{kind:'meaning', accept:item.meaning, ask:primaryAsk}];
+  if(item.reading){ qs.push({kind:'reading', accept:item.reading, ask:'Key fact'}); }
+  return qs;
+}
+
+/* WaniKani-style: each item splits into independent Meaning + Reading cards.
+   Both must be answered correctly to clear the item; missing EITHER part
+   makes the review drop the item's SRS stage. Wrong cards are re-queued
+   until correct (the item still records the miss). */
+/* mode: 'lessons' | 'reviews' | 'practice' (practice = no SRS change)
+   filter: 'both' | 'meaning' | 'reading'
+   explicit: optional array of items to drill (otherwise drawn from queue) */
+function startSession(mode, filter, explicit){
+  filter = filter||'both';
+  const src = explicit || (mode==='lessons'? lessonsQueue() : reviewsQueue());
+  let cards=[]; const track={}; let items=0;
+  src.forEach(item=>{
+    let qs=buildQuestions(item,mode);
+    if(filter==='meaning') qs=qs.filter(q=>q.kind==='meaning');
+    else if(filter==='reading') qs=qs.filter(q=>q.kind==='reading');
+    if(!qs.length) return;               // skip items lacking the chosen part
+    items++;
+    track[item.id]={item, remaining:qs.length, wrong:false, missed:[]};
+    qs.forEach(q=> cards.push({item, q}));
+  });
+  if(cards.length===0) return;
+  for(let i=cards.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[cards[i],cards[j]]=[cards[j],cards[i]];}
+  session={mode, filter, cards, track, pos:0, total:items, completed:0, correct:0};
+  const label = mode==='lessons'?'Lessons':mode==='practice'?'Practice':'Reviews';
+  const fl = filter==='meaning'?' · meaning':filter==='reading'?' · reading':'';
+  $('#sMode').textContent = label+fl;
+  $('#summary').classList.remove('show');
+  $('#session').classList.add('show');
+  nextCard();
+}
+
+function nextCard(){
+  if(session.cards.length===0){ endSession(); return; }
+  if(session.pos>=session.cards.length) session.pos=0;
+  const c=session.cards[session.pos];
+  const item=c.item, q=c.q;
+  const part = q.kind==='reading' ? 'reading' : 'meaning';
+  $('#prompt').className='prompt '+item.type+' part-'+part;
+  $('#pType').textContent = item.type.charAt(0).toUpperCase()+item.type.slice(1);
+  $('#pBig').textContent=item.char;
+  $('#pAsk').innerHTML = `<span class="parttag ${part}">${part==='reading'?'Reading':'Meaning'}</span>${q.ask}`;
+  const inp=$('#ansInput');
+  inp.value=''; inp.className=''; inp.disabled=false;
+  inp.placeholder = part==='reading'?'Type the key fact…':'Type the meaning…';
+  $('#ansHint').textContent='';
+  $('#ansInfo').classList.remove('show');
+  $('#ansNext').className='btn ansnext';   // hide the Next button for the new card
+  const pct = session.total? Math.round(session.completed/session.total*100):0;
+  $('#progBar').style.transform='scaleX('+(pct/100)+')';
+  $('#sCounter').textContent=`${session.completed} / ${session.total}`;
+  inp.focus();
+}
+
+let awaitingNext=false, lastCorrect=false;
+function submitAnswer(){
+  const c=session.cards[session.pos];
+  const item=c.item, q=c.q;
+  const inp=$('#ansInput');
+  if(awaitingNext){ awaitingNext=false; advanceCard(lastCorrect); return; }
+  if(!inp.value.trim()) return;
+  const ok = matches(inp.value, q.accept);
+  lastCorrect=ok;
+  // track lifetime accuracy on real reviews (for Critical Items)
+  if(session.mode==='reviews'){
+    const st=state.items[item.id]; if(st){ st.right=(st.right||0)+(ok?1:0); st.wrong=(st.wrong||0)+(ok?0:1); save(); }
+  }
+  inp.className = ok?'correct':'wrong';
+  inp.disabled=true;
+  const nextBtn=$('#ansNext');
+  if(ok){
+    $('#ansHint').textContent='✓ Correct. Press Enter or tap Next';
+    nextBtn.textContent='Next →';
+    nextBtn.className='btn ansnext correct show';
+  }else{
+    const t=session.track[item.id]; t.wrong=true;
+    if(!t.missed.includes(q.kind)) t.missed.push(q.kind);
+    $('#ansHint').textContent='✗ Answer: '+q.accept[0];
+    $('#ansInfo').innerHTML=(item.mnemonic?`<h4>Mnemonic</h4><p class="mn">${item.mnemonic}</p>`:'')+
+      `<h4>Details</h4><p>${item.info}</p>`;
+    $('#ansInfo').classList.add('show');
+    nextBtn.textContent='Got it, Next →';
+    nextBtn.className='btn ansnext wrong show';
+  }
+  awaitingNext=true;
+}
+function clickNext(){ if(awaitingNext){ awaitingNext=false; advanceCard(lastCorrect); } }
+
+function advanceCard(correct){
+  const c=session.cards[session.pos];
+  const item=c.item;
+  if(correct){
+    session.cards.splice(session.pos,1);          // card cleared
+    const t=session.track[item.id];
+    if(--t.remaining<=0){                          // all chosen parts done → finalize item
+      if(session.mode==='lessons') learn(item.id);
+      else if(session.mode==='reviews') advance(item.id, !t.wrong);
+      // 'practice' mode: no SRS change
+      session.completed++;
+      if(!t.wrong) session.correct++;
+    }
+  }else{
+    // re-queue this card a few positions back (WaniKani re-asks until correct)
+    const card=session.cards.splice(session.pos,1)[0];
+    const back=Math.min(session.cards.length, session.pos + 2 + (Math.random()*4|0));
+    session.cards.splice(back,0,card);
+  }
+  if(session.cards.length===0){ endSession(); return; }
+  if(session.pos>=session.cards.length) session.pos=0;
+  nextCard();
+}
+
+function endSession(quit){
+  if(!session){ $('#session').classList.remove('show'); return; }
+  const s=session;
+  const beforeLevel=state.level;
+  $('#session').classList.remove('show');
+  session=null;
+  maybeLevelUp();
+  renderAll();
+  showSummary(s, state.level>beforeLevel ? state.level : 0, quit);
+}
+
+function prefersReducedMotion(){ try{ return window.matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){ return false; } }
+function countUp(el, target, suffix){
+  suffix=suffix||'';
+  if(prefersReducedMotion() || typeof requestAnimationFrame==='undefined'){ el.textContent=target+suffix; return; }
+  const dur=600, start=performance.now();
+  (function step(t){
+    const p=Math.min(1,(t-start)/dur), e=1-Math.pow(1-p,3);
+    el.textContent=Math.round(target*e)+suffix;
+    if(p<1) requestAnimationFrame(step);
+  })(performance.now());
+}
+function showSummary(s, leveledTo, quit){
+  const finished=Object.values(s.track).filter(t=>t.remaining<=0);
+  const done=finished.length;
+  const missed=finished.filter(t=>t.wrong);
+  const correct=done-missed.length;
+  const acc=done? Math.round(correct/done*100):0;
+  $('#sumTitle').textContent = quit ? 'Session paused'
+    : s.mode==='lessons' ? 'Lessons complete 🎉'
+    : s.mode==='practice' ? 'Practice complete 💪' : 'Reviews complete 🎉';
+  countUp($('#sumItems'), done);
+  countUp($('#sumCorrect'), correct);
+  countUp($('#sumWrong'), missed.length);
+  countUp($('#sumAcc'), acc, '%');
+  const lvl=$('#sumLevel');
+  if(leveledTo){
+    lvl.innerHTML=`<span class="up">⬆ Level up! You reached Level ${leveledTo}</span>`;
+    const chip=$('#hdrLevel'); chip.classList.remove('levelup'); void chip.offsetWidth; chip.classList.add('levelup');
+  }
+  else if(s.mode==='practice'){ lvl.innerHTML='<span style="color:var(--muted)">Practice run, SRS unchanged</span>'; }
+  else lvl.innerHTML='';
+  // missed list
+  if(missed.length){
+    $('#sumMissWrap').style.display='block';
+    $('#sumRedo').style.display='block';
+    $('#sumMissList').innerHTML=missed.map(t=>{
+      const i=t.item;
+      const parts=t.missed.map(k=>k==='reading'?'reading':'meaning').join(' + ');
+      const ans=(i.meaning&&i.meaning[0])||'';
+      return `<div class="miss-card ${i.type}" data-item="${i.id}">
+        <span class="mc-chip">${i.char}</span>
+        <span class="mc-ans">missed <b>${parts}</b>: ${ans}</span></div>`;
+    }).join('');
+    $$('#sumMissList .miss-card').forEach(c=>c.onclick=()=>openModal(c.dataset.item));
+    SUMMARY_MISSED = missed.map(t=>t.item);
+  }else{
+    $('#sumMissWrap').style.display='none';
+    $('#sumRedo').style.display='none';
+    SUMMARY_MISSED=[];
+  }
+  $('#summary').classList.add('show');
+}
+let SUMMARY_MISSED=[];
+$('#sumDone').onclick=()=>{ $('#summary').classList.remove('show'); renderAll(); };
+$('#sumRedo').onclick=()=>{ if(SUMMARY_MISSED.length){ const items=SUMMARY_MISSED.slice(); $('#summary').classList.remove('show'); startSession('practice','both',items); } };
+
+$('#ansInput').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); submitAnswer(); }});
+$('#ansNext').onclick=clickNext;
+$('#sQuit').onclick=()=>quitSession();
+function quitSession(){ if(confirm('Quit this session? Finished items are saved; you’ll see a summary.')) endSession(true); }
+
+/* ---- Reading-before-lesson teaching flow ----
+   Show each new item's meaning/key fact/mnemonic/details, then run the quiz. */
+let lessonItems=[], lessonIdx=0;
+function startLessons(){
+  const items=lessonsQueue();
+  if(!items.length) return;
+  lessonItems=items; lessonIdx=0;
+  $('#lesson').classList.add('show');
+  showLessonCard();
+}
+function showLessonCard(){
+  const i=lessonItems[lessonIdx];
+  $('#lessonPrompt').className='prompt '+i.type;
+  $('#lpType').textContent=i.type.charAt(0).toUpperCase()+i.type.slice(1);
+  $('#lpBig').textContent=i.char;
+  const askLabel=i.type==='stem'?'Meaning':i.type==='class'?'Mechanism / effect':'Class';
+  $('#lpSub').textContent=askLabel;
+  let d=`<h4>${askLabel} <span style="color:#bbb">(you’ll be quizzed on this)</span></h4><p class="big-ans">${cap(i.meaning[0])}</p>`;
+  if(i.reading) d+=`<h4>Key fact <span style="color:#bbb">(you’ll be quizzed on this)</span></h4><p class="big-ans">${cap(i.reading[0])}</p>`;
+  if(i.mnemonic) d+=`<h4>Mnemonic</h4><p class="mn">${i.mnemonic}</p>`;
+  d+=`<h4>Details</h4><p>${i.info}</p>`;
+  if(i.requires.length) d+=`<h4>Built from</h4><p>${i.requires.map(r=>byId[r].char).join(', ')}</p>`;
+  $('#lpDetail').innerHTML=d;
+  $('#lessonCounter').textContent=`${lessonIdx+1} / ${lessonItems.length}`;
+  $('#lessonBar').style.width=Math.round((lessonIdx)/lessonItems.length*100)+'%';
+  $('#lpPrev').toggleAttribute('disabled', lessonIdx===0);
+  $('#lpNext').textContent = lessonIdx===lessonItems.length-1 ? 'Start quiz →' : 'Next →';
+  $('#lpDetail').parentElement.scrollTop=0;
+}
+function cap(s){ return s.replace(/\b\w/g,c=>c.toUpperCase()); }
+function lessonNext(){
+  if(lessonIdx<lessonItems.length-1){ lessonIdx++; showLessonCard(); }
+  else { $('#lesson').classList.remove('show'); startSession('lessons','both',lessonItems); }
+}
+function lessonPrev(){ if(lessonIdx>0){ lessonIdx--; showLessonCard(); } }
+$('#lpNext').onclick=lessonNext;
+$('#lpPrev').onclick=lessonPrev;
+$('#lessonQuit').onclick=()=>{ if(confirm('Close the lesson? You can restart it anytime.')) $('#lesson').classList.remove('show'); };
+
+/* ============================================================
+   Wiring
+   ============================================================ */
+$('#btnLessons').onclick=()=>startLessons();
+$('#btnReviews').onclick=()=>startSession('reviews');
+$('#qMeaning').onclick=()=>{ if(!$('#qMeaning').hasAttribute('disabled')) startSession('practice','meaning'); };
+$('#qReading').onclick=()=>{ if(!$('#qReading').hasAttribute('disabled')) startSession('practice','reading'); };
+let CRITICAL_ITEMS=[];
+$('#studyCritical').onclick=()=>{ if(CRITICAL_ITEMS.length) startSession('practice','both',CRITICAL_ITEMS.slice()); };
+$('#lvlPrev').onclick=()=>{ if(levelView==null)levelView=state.level; if(levelView>1){ levelView--; renderDashboard(); } };
+$('#lvlNext').onclick=()=>{ if(levelView==null)levelView=state.level; if(levelView<MAX_LEVEL){ levelView++; renderDashboard(); } };
+
+/* ---- Keyboard control across lesson teaching, quiz, and summary ---- */
+document.addEventListener('keydown',e=>{
+  if($('#lesson').classList.contains('show')){
+    if(e.key==='ArrowRight'||e.key==='Enter'||e.key===' '){ e.preventDefault(); lessonNext(); }
+    else if(e.key==='ArrowLeft'){ e.preventDefault(); lessonPrev(); }
+    else if(e.key==='Escape'){ e.preventDefault(); $('#lessonQuit').click(); }
+    return;
+  }
+  if($('#session').classList.contains('show')){              // quiz: Enter handled by the input
+    if(e.key==='Escape'){ e.preventDefault(); quitSession(); }
+    return;
+  }
+  if($('#summary').classList.contains('show')){
+    if(e.key==='Enter'){ e.preventDefault(); $('#sumDone').click(); }
+    else if(e.key.toLowerCase()==='r' && SUMMARY_MISSED.length){ e.preventDefault(); $('#sumRedo').click(); }
+    return;
+  }
+});
+function switchTab(tab){
+  $$('header nav button').forEach(x=>x.classList.toggle('active', x.dataset.tab===tab));
+  $('#dash').style.display   = tab==='dash'?'block':'none';
+  $('#levels').style.display = tab==='levels'?'block':'none';
+  $('#browse').style.display = tab==='browse'?'block':'none';
+  if(tab==='levels') renderLevels();
+  if(tab==='browse'){ renderBrowse(); $('#searchInput').focus(); }
+  const w=$('#'+tab); w.classList.remove('tab-in'); void w.offsetWidth; w.classList.add('tab-in');  // retrigger crossfade
+}
+$$('header nav button').forEach(b=>{ b.onclick=()=>switchTab(b.dataset.tab); });
+
+/* ---- Global / dashboard keyboard shortcuts + help (?) ---- */
+function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal'].some(s=>$(s).classList.contains('show')); }
+function typingField(){ const a=document.activeElement; return a && ['searchInput','loginUser','loginPass','ansInput'].includes(a.id); }
+function toggleHelp(force){
+  const open = force===undefined ? !$('#kbhelp').classList.contains('show') : force;
+  $('#kbhelp').classList.toggle('show', open);
+}
+$('#kbBtn').onclick=()=>toggleHelp(true);
+$('#kbClose').onclick=()=>toggleHelp(false);
+
+/* ---- theme (dark / light) ---- */
+const THEME_KEY='wanipharm_theme';
+function currentTheme(){ return document.documentElement.getAttribute('data-theme')||'light'; }
+function applyTheme(theme){
+  document.documentElement.setAttribute('data-theme', theme);
+  const b=$('#themeBtn'), label = theme==='dark' ? 'Switch to light mode' : 'Switch to dark mode';
+  b.textContent = theme==='dark' ? '☀' : '☾';
+  b.title = label;
+  b.setAttribute('aria-label', label);
+}
+applyTheme(currentTheme());   // sync the button to whatever the head script set
+$('#themeBtn').onclick=()=>{ const next=currentTheme()==='dark'?'light':'dark'; localStorage.setItem(THEME_KEY,next); applyTheme(next); };
+$('#kbhelp').onclick=e=>{ if(e.target.id==='kbhelp') toggleHelp(false); };
+document.addEventListener('keydown',e=>{
+  if($('#kbhelp').classList.contains('show')){ if(e.key==='Escape'||e.key==='?'){ e.preventDefault(); toggleHelp(false); } return; }
+  if(e.key==='?' && !typingField() && !$('#login').classList.contains('show')){ e.preventDefault(); toggleHelp(true); return; }
+  if(overlayOpen()||typingField()) return;
+  const k=e.key.toLowerCase();
+  // tab switching from any tab
+  if(k==='1'){ switchTab('dash'); return; }
+  if(k==='2'){ switchTab('levels'); return; }
+  if(k==='3'){ switchTab('browse'); return; }
+  // action shortcuts only on the dashboard
+  if($('#dash').style.display==='none') return;
+  if(k==='l'){ if(!$('#btnLessons').hasAttribute('disabled')) startLessons(); }
+  else if(k==='r'){ if(!$('#btnReviews').hasAttribute('disabled')) startSession('reviews'); }
+  else if(k==='m'){ if(!$('#qMeaning').hasAttribute('disabled')) startSession('practice','meaning'); }
+  else if(k==='k'){ if(!$('#qReading').hasAttribute('disabled')) startSession('practice','reading'); }
+  else if(k==='c'){ if(CRITICAL_ITEMS.length) startSession('practice','both',CRITICAL_ITEMS.slice()); }
+});
+
+/* ---- Browse / search by body system ---- */
+const SYSTEMS=[
+  {name:'Autonomic: Cholinergic', levels:[1,2]},
+  {name:'Autonomic: Adrenergic & Cardiovascular', levels:[3,4,5]},
+  {name:'Antibiotics', levels:[6,7,8]},
+  {name:'Antifungals', levels:[9]},
+  {name:'Antivirals', levels:[10,11]},
+  {name:'Oncology', levels:[12,13]}
+];
+function itemMatches(i,q){
+  if(!q) return true;
+  const hay=(i.char+' '+i.meaning.join(' ')+' '+(i.reading?i.reading.join(' '):'')+' '+i.info).toLowerCase();
+  return q.split(/\s+/).every(t=>hay.includes(t));
+}
+function renderBrowse(){
+  const q=$('#searchInput').value.toLowerCase().trim();
+  let html='';
+  SYSTEMS.forEach(sys=>{
+    const items=ITEMS.filter(i=>sys.levels.includes(i.level) && itemMatches(i,q));
+    if(!items.length) return;
+    html+=`<div class="sys-block"><div class="sys-head">${sys.name} <small>· ${items.length} item${items.length>1?'s':''}</small></div>`;
+    [['stem','Stems'],['class','Classes'],['drug','Drugs']].forEach(([tp,label])=>{
+      const tps=items.filter(i=>i.type===tp);
+      if(!tps.length) return;
+      html+=`<div class="sys-row"><span class="sys-label">${label}</span><div class="igrid">`;
+      tps.forEach(i=>{
+        html+=`<div class="chip ${tp}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+  });
+  if(!html) html=`<p style="color:var(--muted);text-align:center;padding:48px 12px">No items match “${$('#searchInput').value}”.</p>`;
+  $('#browseList').innerHTML=html;
+  $$('#browseList .chip[data-item]').forEach(c=>{
+    c.onclick=()=>openModal(c.dataset.item);
+    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openModal(c.dataset.item); } };
+  });
+  browseFocus=-1;
+}
+$('#searchInput').addEventListener('input', renderBrowse);
+
+/* ---- Browse keyboard navigation ----
+   "/" focus search · ↑↓←→ move · Enter open · Esc clear/close */
+let browseFocus=-1;
+function browseChipEls(){ return Array.from(document.querySelectorAll('#browseList .chip[data-item]')); }
+function setBrowseFocus(idx){
+  const chips=browseChipEls();
+  if(!chips.length){ browseFocus=-1; return; }
+  browseFocus=Math.max(0,Math.min(idx,chips.length-1));
+  chips.forEach((c,i)=>c.classList.toggle('kbfocus', i===browseFocus));
+  chips[browseFocus].scrollIntoView({block:'nearest'});
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && $('#modal').classList.contains('show')){ $('#modal').classList.remove('show'); return; }
+  if($('#browse').style.display==='none') return;
+  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')) return;
+  const inInput = document.activeElement===$('#searchInput');
+  if(e.key==='/' && !inInput){ e.preventDefault(); $('#searchInput').focus(); return; }
+  if(inInput){
+    if(e.key==='ArrowDown'){ e.preventDefault(); $('#searchInput').blur(); setBrowseFocus(0); }
+    else if(e.key==='Enter'){ const c=browseChipEls(); if(c.length){ e.preventDefault(); openModal(c[0].dataset.item); } }
+    return;
+  }
+  const chips=browseChipEls(); if(!chips.length) return;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'){ e.preventDefault(); setBrowseFocus(browseFocus<0?0:browseFocus+1); }
+  else if(e.key==='ArrowLeft'||e.key==='ArrowUp'){
+    e.preventDefault();
+    if(browseFocus<=0){ chips.forEach(c=>c.classList.remove('kbfocus')); browseFocus=-1; $('#searchInput').focus(); }
+    else setBrowseFocus(browseFocus-1);
+  }
+  else if(e.key==='Enter' && browseFocus>=0){ e.preventDefault(); openModal(chips[browseFocus].dataset.item); }
+  else if(e.key==='Escape'){ $('#searchInput').value=''; renderBrowse(); $('#searchInput').focus(); }
+});
+$('#resetBtn').onclick=()=>{
+  if(confirm('Reset ALL progress for this profile? This cannot be undone.')){
+    state={level:1, items:{}};
+    save(); renderAll(); toast('Progress reset.');
+  }
+};
+
+let toastT;
+function toast(msg){
+  const t=$('#toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),2200);
+}
+
+function renderAll(){
+  renderDashboard();
+  if($('#levels').style.display!=='none') renderLevels();
+  if($('#browse').style.display!=='none') renderBrowse();
+}
+
+/* ============================================================
+   Auth — Google Sign-In + local profiles
+   ============================================================ */
+/* ▼▼▼  PASTE YOUR GOOGLE OAUTH CLIENT ID HERE  ▼▼▼
+   Get one free at https://console.cloud.google.com → APIs & Services →
+   Credentials → Create OAuth client ID → "Web application".
+   Add Authorized JavaScript origin: http://localhost:8000
+   Then serve this folder (e.g.  python3 -m http.server 8000 )
+   and open  http://localhost:8000/wanipharm.html
+   Full steps are in  README-google-login.md                              */
+const GOOGLE_CLIENT_ID = '140328524020-jgsrlnbhivv394iaksr9pbldhsk0vpbq.apps.googleusercontent.com';   // e.g. '1234567890-abcdef.apps.googleusercontent.com'
+
+/* ▼▼▼  FIREBASE CLOUD SYNC (optional)  ▼▼▼
+   Paste your Firebase web-app config below to sync progress across devices.
+   Get it free at https://console.firebase.google.com →
+     1. Create a project, add a Web app, copy the config object here.
+     2. Build → Authentication → Sign-in method → enable **Google**.
+     3. Build → Firestore Database → create database (production mode).
+        Then publish these rules so each account owns only its own progress:
+          match /progress/{uid} { allow read, write: if request.auth.uid == uid; }
+   Use the SAME Google client as GOOGLE_CLIENT_ID above (Firebase auto-creates a
+   "Web client" under that project — set GOOGLE_CLIENT_ID to it).
+   Leave this object empty {} to keep NekoPharm fully local, exactly as before.
+   Full steps: README-firebase-sync.md                                          */
+const FIREBASE_CONFIG = {
+  // apiKey: "AIza...",
+  // authDomain: "your-project.firebaseapp.com",
+  // projectId: "your-project",
+  // storageBucket: "your-project.appspot.com",
+  // messagingSenderId: "0000000000",
+  // appId: "1:0000000000:web:abc123"
+};
+
+const USERS_KEY='wanipharm_users';
+function loadUsers(){ try{ return JSON.parse(localStorage.getItem(USERS_KEY))||{}; }catch(e){ return {}; } }
+function saveUsers(u){ try{ localStorage.setItem(USERS_KEY, JSON.stringify(u)); }catch(e){} }
+function hash(s){ let h=5381; for(let i=0;i<s.length;i++) h=((h<<5)+h+s.charCodeAt(i))>>>0; return ''+h; }
+function setDisplayName(user,name){ try{ localStorage.setItem('wanipharm_dn_'+user, name); }catch(e){} }
+function getDisplayName(user){ return localStorage.getItem('wanipharm_dn_'+user) || (user==='guest'?'Guest':user); }
+
+/* ----- Google Identity Services ----- */
+function jwtPayload(tok){
+  try{
+    const b=tok.split('.')[1].replace(/-/g,'+').replace(/_/g,'/');
+    const json=decodeURIComponent(atob(b).split('').map(c=>'%'+('00'+c.charCodeAt(0).toString(16)).slice(-2)).join(''));
+    return JSON.parse(json);
+  }catch(e){ return null; }
+}
+function onGoogleCredential(resp){
+  const data=jwtPayload(resp.credential);
+  if(!data||!data.email){ $('#loginErr').textContent='Could not read Google account.'; return; }
+  currentUser=data.email.toLowerCase();
+  setDisplayName(currentUser, data.name || data.given_name || data.email);
+  localStorage.setItem('wanipharm_user', currentUser);
+  localStorage.setItem('wanipharm_auth_'+currentUser, 'google');
+  // Re-use the Google credential to sign into Firebase → unlocks cloud sync.
+  if(initFirebase()){
+    try{
+      const cred = firebase.auth.GoogleAuthProvider.credential(resp.credential);
+      fbAuth.signInWithCredential(cred)
+        .then(res=>{ cloudUid = res.user.uid; bootApp(); startCloudSync(); })
+        .catch(e=>{ console.warn('Firebase sign-in failed; staying local', e); bootApp(); });
+      return;
+    }catch(e){ console.warn('Firebase sign-in error; staying local', e); }
+  }
+  bootApp();   // local-only fallback (Firebase not configured / offline)
+}
+let googleInited=false;
+function initGoogle(){
+  const note=$('#gnote'), wrap=$('#gbtn');
+  const isFile = (typeof location!=='undefined' && location.protocol==='file:');
+  if(!GOOGLE_CLIENT_ID || isFile || !(window.google&&google.accounts&&google.accounts.id)){
+    // show a helpful reason instead of a broken button
+    let why='';
+    if(!GOOGLE_CLIENT_ID) why='Add your Google Client ID in wanipharm.html to enable Google sign-in.';
+    else if(isFile) why='Google sign-in needs the app served over http. Run a local server (see README-google-login.md).';
+    else why='Loading Google…';
+    if(note) note.innerHTML=why;
+    if(wrap) wrap.innerHTML='';
+    return false;
+  }
+  if(!googleInited){
+    google.accounts.id.initialize({client_id:GOOGLE_CLIENT_ID, callback:onGoogleCredential, auto_select:false});
+    googleInited=true;
+  }
+  $('#gnote').innerHTML='';
+  google.accounts.id.renderButton($('#gbtn'), {theme:'filled_blue', size:'large', width:280, text:'continue_with', shape:'pill'});
+  return true;
+}
+window.addEventListener('load', ()=>{ if($('#login').classList.contains('show')) initGoogle(); });
+
+function showLogin(){
+  $('#login').classList.add('show');
+  $('#loginUser').value=''; $('#loginPass').value=''; $('#loginErr').textContent='';
+  initGoogle();
+  setTimeout(()=>$('#loginUser').focus(),50);
+}
+function bootApp(){
+  $('#login').classList.remove('show');
+  state = load();
+  maybeLevelUp();
+  levelView=null;   // Level-progress widget defaults to the current level
+  const dn=getDisplayName(currentUser);
+  $('#userName').textContent = dn;
+  const first=(dn||'').split(/[\s@]/)[0];
+  const h=new Date().getHours();
+  $('#greet').textContent=(h<12?'Good morning':h<18?'Good afternoon':'Good evening')+(currentUser&&currentUser!=='guest'?', '+first:'')+' 👋';
+  renderAll();
+}
+function doLogin(create){
+  const name=$('#loginUser').value.trim();
+  const pass=$('#loginPass').value;
+  const err=$('#loginErr');
+  if(!name){ err.textContent='Enter a username.'; return; }
+  if(/\s/.test(name)){ err.textContent='Username can’t contain spaces.'; return; }
+  const users=loadUsers();
+  if(create){
+    if(users[name]){ err.textContent='That username already exists. Try logging in.'; return; }
+    if(pass.length<3){ err.textContent='Password needs at least 3 characters.'; return; }
+    users[name]=hash(pass); saveUsers(users);
+  }else{
+    if(!users[name]){ err.textContent='No such profile. Create it first.'; return; }
+    if(users[name]!==hash(pass)){ err.textContent='Wrong password.'; return; }
+  }
+  currentUser=name; setDisplayName(name,name); localStorage.setItem('wanipharm_user', name); bootApp();
+}
+$('#loginInBtn').onclick=()=>doLogin(false);
+$('#loginUpBtn').onclick=()=>doLogin(true);
+$('#loginGuest').onclick=()=>{ currentUser='guest'; localStorage.setItem('wanipharm_user','guest'); bootApp(); };
+$('#loginPass').addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); doLogin(false); }});
+$('#logoutBtn').onclick=()=>{
+  try{ if(window.google&&google.accounts&&google.accounts.id) google.accounts.id.disableAutoSelect(); }catch(e){}
+  try{ if(fbAuth) fbAuth.signOut(); }catch(e){}
+  clearTimeout(cloudPushT); cloudUid=null; setSync(null);
+  localStorage.removeItem('wanipharm_user'); currentUser=null; showLogin();
+};
+
+/* Re-establish cloud sync for a returning Google user. Firebase persists the
+   session, so onAuthStateChanged fires with the user on reload — no re-login. */
+function resumeCloud(){
+  if(!currentUser || currentUser==='guest') return;
+  if(localStorage.getItem('wanipharm_auth_'+currentUser)!=='google') return;
+  if(!initFirebase()) return;
+  fbAuth.onAuthStateChanged(u=>{ if(u && !cloudUid){ cloudUid=u.uid; startCloudSync(); } });
+}
+
+/* boot: resume saved profile or show login */
+(function(){
+  const saved=localStorage.getItem('wanipharm_user');
+  if(saved){ currentUser=saved; bootApp(); resumeCloud(); } else { showLogin(); }
+})();
+</script>
+</body>
+</html>
