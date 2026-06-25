@@ -1591,7 +1591,7 @@ function renderAll(){
    Then serve this folder (e.g.  python3 -m http.server 8000 )
    and open  http://localhost:8000/wanipharm.html
    Full steps are in  README-google-login.md                              */
-const GOOGLE_CLIENT_ID = '140328524020-jgsrlnbhivv394iaksr9pbldhsk0vpbq.apps.googleusercontent.com';   // e.g. '1234567890-abcdef.apps.googleusercontent.com'
+const GOOGLE_CLIENT_ID = '695657291548-5chg78b6vup8asnv6aaooai027a52nvt.apps.googleusercontent.com';   // e.g. '1234567890-abcdef.apps.googleusercontent.com'
 
 /* ▼▼▼  FIREBASE CLOUD SYNC (optional)  ▼▼▼
    Paste your Firebase web-app config below to sync progress across devices.
@@ -1606,12 +1606,15 @@ const GOOGLE_CLIENT_ID = '140328524020-jgsrlnbhivv394iaksr9pbldhsk0vpbq.apps.goo
    Leave this object empty {} to keep NekoPharm fully local, exactly as before.
    Full steps: README-firebase-sync.md                                          */
 const FIREBASE_CONFIG = {
-  // apiKey: "AIza...",
-  // authDomain: "your-project.firebaseapp.com",
-  // projectId: "your-project",
-  // storageBucket: "your-project.appspot.com",
-  // messagingSenderId: "0000000000",
-  // appId: "1:0000000000:web:abc123"
+ const firebaseConfig = {
+  apiKey: "AIzaSyD0PBvMEAZLfKJq8Ia-MlJr9yc-pk8jdl8",
+  authDomain: "nekopharm-54eac.firebaseapp.com",
+  projectId: "nekopharm-54eac",
+  storageBucket: "nekopharm-54eac.firebasestorage.app",
+  messagingSenderId: "446993714477",
+  appId: "1:446993714477:web:152f7aa14977f5877f57a4",
+  measurementId: "G-MRKKMTL845"
+};
 };
 
 const USERS_KEY='wanipharm_users';
