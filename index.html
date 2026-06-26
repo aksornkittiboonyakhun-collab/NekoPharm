@@ -405,6 +405,20 @@
   .set-opt>span{display:flex;flex-direction:column;gap:3px;min-width:0}
   .set-opt .set-opt-t{display:block;font-size:14px;font-weight:650;color:var(--ink);line-height:1.3}
   .set-opt .set-opt-d{display:block;font-size:12.5px;color:var(--muted);line-height:1.45}
+  .set-switch-row{display:flex;align-items:flex-start;justify-content:space-between;gap:14px}
+  .set-switch-txt{min-width:0}
+  .set-speed{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px}
+  .set-speed label{font-size:13px;font-weight:600;color:var(--muted)}
+  .set-speed .set-input{width:auto;min-width:130px}
+  .set-speed[hidden]{display:none}
+  .switch{position:relative;display:inline-block;width:44px;height:25px;flex:none;cursor:pointer}
+  .switch input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+  .switch-track{position:absolute;inset:0;background:var(--line);border-radius:999px;transition:background .15s var(--ease-out-quart)}
+  .switch-track::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;background:#fff;border-radius:50%;
+    box-shadow:0 1px 2px rgba(0,0,0,.35);transition:transform .15s var(--ease-out-quart)}
+  .switch input:checked + .switch-track{background:var(--stem)}
+  .switch input:checked + .switch-track::after{transform:translateX(19px)}
+  .switch input:focus-visible + .switch-track{outline:3px solid var(--stem);outline-offset:2px}
   .sheet .close{display:block;width:100%;border:none;border-top:1px solid var(--line);background:var(--subtle);color:var(--ink);padding:14px;font-weight:700;cursor:pointer;font-size:15px;font-family:inherit}
   .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff;margin-top:8px}
 
@@ -1063,13 +1077,26 @@
     <div class="body">
       <div class="set-row">
         <label for="setBatch">Preferred lesson batch size</label>
-        <p class="set-help">How many new lessons you’re taught per sitting before the quiz.</p>
-        <select id="setBatch" class="set-input"></select>
+        <p class="set-help">How many new lessons you’re taught per sitting before the quiz. Type any number from 1 to 100.</p>
+        <input type="number" id="setBatch" class="set-input" min="1" max="100" step="1" inputmode="numeric">
       </div>
       <div class="set-row">
         <label for="setDaily">Maximum recommended daily lessons</label>
         <p class="set-help">A soft daily target. You can always “Learn anyway” past it.</p>
         <select id="setDaily" class="set-input"></select>
+      </div>
+      <div class="set-row">
+        <div class="set-switch-row">
+          <div class="set-switch-txt">
+            <span class="set-label">Auto-advance on correct</span>
+            <p class="set-help" style="margin-bottom:0">Skip the extra keypress — the next card appears automatically after a clean correct answer. Wrong (and misspelled) answers still wait so you can read why.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="setAuto"><span class="switch-track"></span></label>
+        </div>
+        <div class="set-speed" id="setSpeedWrap" hidden>
+          <label for="setSpeed">Auto-advance speed</label>
+          <select id="setSpeed" class="set-input"></select>
+        </div>
       </div>
       <div class="set-row">
         <span class="set-label">Review ordering</span>
@@ -1178,8 +1205,9 @@ function save(){ try{ localStorage.setItem(userKey(), JSON.stringify(state)); }c
 /* ============================================================
    User settings (study preferences)
    ============================================================ */
-const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled' };
+const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled', autoAdvance:false, autoAdvanceMs:500 };
 const REVIEW_ORDERS = ['shuffled','apprentice','lowsrs','lowlevel'];
+const AUTO_SPEEDS = [300,500,900];
 /* Returns the live settings object, filling in any missing defaults. */
 function settings(){
   if(!state.settings) state.settings = Object.assign({}, SETTINGS_DEFAULTS);
@@ -1188,9 +1216,11 @@ function settings(){
 }
 function setSetting(key, val){
   const s = settings();
-  if(key==='lessonBatch'){ val=Math.max(1, Math.min(50, parseInt(val,10)||SETTINGS_DEFAULTS.lessonBatch)); }
+  if(key==='lessonBatch'){ val=Math.max(1, Math.min(100, parseInt(val,10)||SETTINGS_DEFAULTS.lessonBatch)); }
   else if(key==='dailyLessonMax'){ val=Math.max(0, parseInt(val,10)); if(isNaN(val)) val=SETTINGS_DEFAULTS.dailyLessonMax; }  // 0 = unlimited
   else if(key==='reviewOrder'){ if(!REVIEW_ORDERS.includes(val)) val=SETTINGS_DEFAULTS.reviewOrder; }
+  else if(key==='autoAdvance'){ val=!!val; }
+  else if(key==='autoAdvanceMs'){ val=parseInt(val,10); if(!AUTO_SPEEDS.includes(val)) val=SETTINGS_DEFAULTS.autoAdvanceMs; }
   s[key]=val; state.settings=s; save();
 }
 
@@ -1836,12 +1866,13 @@ function nextCard(){
   inp.focus();
 }
 
-let awaitingNext=false, lastCorrect=false;
+let awaitingNext=false, lastCorrect=false, autoAdvTimer=null;
+function clearAutoAdv(){ if(autoAdvTimer){ clearTimeout(autoAdvTimer); autoAdvTimer=null; } }
 function submitAnswer(){
   const c=session.cards[session.pos];
   const item=c.item, q=c.q;
   const inp=$('#ansInput');
-  if(awaitingNext){ awaitingNext=false; advanceCard(lastCorrect); return; }
+  if(awaitingNext){ clearAutoAdv(); awaitingNext=false; advanceCard(lastCorrect); return; }
   if(!inp.value.trim()) return;
   const mi = matchInfo(inp.value, q.accept);
   const ok = mi.ok;
@@ -1856,14 +1887,21 @@ function submitAnswer(){
   const nextBtn=$('#ansNext');
   const hint=$('#ansHint');
   hint.classList.toggle('almost', almost);
+  const auto = settings().autoAdvance;
   if(ok){
     if(almost){
-      hint.textContent='⚠ Accepted, but check your spelling: '+q.accept[0];
+      hint.textContent='⚠ Accepted, but check your spelling: '+q.accept[0];   // typo: always pause so it's noticed
     }else{
-      hint.textContent='✓ Correct. Press Enter or tap Next';
+      hint.textContent = auto ? '✓ Correct' : '✓ Correct. Press Enter or tap Next';
     }
     nextBtn.textContent='Next →';
     nextBtn.className='btn ansnext correct show';
+    // Lightning mode: jump ahead automatically on a clean correct answer
+    if(auto && !almost){
+      awaitingNext=true;
+      autoAdvTimer=setTimeout(()=>{ autoAdvTimer=null; if(awaitingNext){ awaitingNext=false; advanceCard(lastCorrect); } }, settings().autoAdvanceMs);
+      return;
+    }
   }else{
     const t=session.track[item.id]; t.wrong=true;
     if(!t.missed.includes(q.kind)) t.missed.push(q.kind);
@@ -1876,7 +1914,7 @@ function submitAnswer(){
   }
   awaitingNext=true;
 }
-function clickNext(){ if(awaitingNext){ awaitingNext=false; advanceCard(lastCorrect); } }
+function clickNext(){ if(awaitingNext){ clearAutoAdv(); awaitingNext=false; advanceCard(lastCorrect); } }
 
 function advanceCard(correct){
   const c=session.cards[session.pos];
@@ -1903,6 +1941,7 @@ function advanceCard(correct){
 }
 
 function endSession(quit){
+  clearAutoAdv(); awaitingNext=false;
   if(!session){ $('#session').classList.remove('show'); return; }
   const s=session;
   const beforeLevel=state.level;
@@ -2085,8 +2124,11 @@ function fillSelect(sel, values, current, fmt){
 }
 function renderSettings(){
   const s=settings();
-  fillSelect($('#setBatch'), [3,4,5,6,7,8,9,10,12,15], s.lessonBatch, v=>v+' lesson'+(v>1?'s':''));
+  $('#setBatch').value = s.lessonBatch;
   fillSelect($('#setDaily'), [5,10,15,20,25,30,40,50,75,100,0], s.dailyLessonMax, v=> v===0?'Unlimited':v+' lessons');
+  $('#setAuto').checked = !!s.autoAdvance;
+  $('#setSpeedWrap').hidden = !s.autoAdvance;
+  fillSelect($('#setSpeed'), AUTO_SPEEDS, s.autoAdvanceMs, v=> v===300?'Fast':v===900?'Relaxed':'Normal');
   $('#setOrder').innerHTML = ORDER_OPTS.map(o=>
     `<label class="set-opt${o.v===s.reviewOrder?' sel':''}"><input type="radio" name="revorder" value="${o.v}"${o.v===s.reviewOrder?' checked':''}>`+
     `<span><span class="set-opt-t">${o.t}</span><span class="set-opt-d">${o.d}</span></span></label>`).join('');
@@ -2096,8 +2138,10 @@ function closeSettings(){ $('#settings').classList.remove('show'); }
 $('#settingsBtn').onclick=openSettings;
 $('#setClose').onclick=closeSettings;
 $('#settings').onclick=e=>{ if(e.target.id==='settings') closeSettings(); };
-$('#setBatch').onchange=e=>{ setSetting('lessonBatch', e.target.value); };
+$('#setBatch').onchange=e=>{ setSetting('lessonBatch', e.target.value); e.target.value=settings().lessonBatch; };
 $('#setDaily').onchange=e=>{ setSetting('dailyLessonMax', e.target.value); renderDashboard(); };
+$('#setAuto').onchange=e=>{ setSetting('autoAdvance', e.target.checked); $('#setSpeedWrap').hidden=!e.target.checked; };
+$('#setSpeed').onchange=e=>{ setSetting('autoAdvanceMs', e.target.value); };
 $('#setOrder').addEventListener('change', e=>{
   if(e.target.name!=='revorder') return;
   setSetting('reviewOrder', e.target.value);
