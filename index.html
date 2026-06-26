@@ -387,6 +387,17 @@
   .note-edit:focus{border-color:var(--stem)}
   .note-edit::placeholder{color:var(--muted)}
 
+  /* exam page */
+  .exam-page{max-width:560px;margin:0 auto}
+  .exam-title{font-size:26px;font-weight:800;margin:8px 0 6px}
+  .exam-intro{font-size:15px;color:var(--muted);margin-bottom:var(--s5);text-wrap:pretty}
+  .linklike{background:none;border:none;padding:0;font:inherit;color:var(--stem);font-weight:650;cursor:pointer;text-decoration:underline}
+  .exam-card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:var(--s5)}
+  .exam-field{margin-bottom:var(--s4)}
+  .exam-field label{display:block;font-size:14px;font-weight:700;color:var(--ink);margin-bottom:6px}
+  .exam-card #examCount{margin:0 0 var(--s4)}
+  .exam-card #examStart{width:100%}
+
   /* settings modal */
   .setsheet{max-width:460px}
   .set-row{padding:14px 0;border-bottom:1px solid var(--line)}
@@ -579,6 +590,7 @@
     <button data-tab="dash" class="tab-btn active">Dashboard</button>
     <button data-tab="levels" class="tab-btn">Levels</button>
     <button data-tab="browse" class="tab-btn">Browse</button>
+    <button data-tab="exam" class="tab-btn">Exam</button>
   </nav>
   <div class="spacer"></div>
   <button id="themeBtn" class="icon-btn on-dark" title="Toggle dark mode" aria-label="Toggle dark mode">☾</button>
@@ -593,6 +605,7 @@
   <button data-tab="dash" class="tab-btn active"><span class="tabbar-ico">🏠</span><span>Dashboard</span></button>
   <button data-tab="levels" class="tab-btn"><span class="tabbar-ico">📚</span><span>Levels</span></button>
   <button data-tab="browse" class="tab-btn"><span class="tabbar-ico">🔍</span><span>Browse</span></button>
+  <button data-tab="exam" class="tab-btn"><span class="tabbar-ico">📝</span><span>Exam</span></button>
 </nav>
 
 <div class="wrap" id="dash">
@@ -880,11 +893,6 @@
       <button class="btn btn-secondary btn-sm" id="qReading"><b id="qReadingN">0</b> Reading</button>
       <span class="quicknote">doesn’t change SRS</span>
     </div>
-    <div class="quickrow">
-      <span class="quicklabel">Exam mode</span>
-      <button class="btn btn-secondary btn-sm" id="examBtn">📝 Cram unlocked items <kbd>E</kbd></button>
-      <span class="quicknote">drill everything you’ve learned, ignores SRS</span>
-    </div>
   </section>
 
   <section class="forecast" id="forecastWrap">
@@ -969,6 +977,29 @@
     <span>Tap an item for details. Keyboard: <kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear.</span>
   </div>
   <div id="browseList"></div>
+</div>
+
+<div class="wrap" id="exam" style="display:none">
+  <section class="exam-page">
+    <h1 class="exam-title">📝 Exam mode</h1>
+    <p class="exam-intro">Free study with no SRS. Drill any part of the curriculum — even items you haven’t unlocked yet — as many times as you like. It never changes your SRS stages or due times. To just read every item’s details, use the <button type="button" class="linklike" id="examToBrowse">Browse</button> tab.</p>
+    <div class="exam-card">
+      <div class="exam-field">
+        <label for="examScope">What to drill</label>
+        <select id="examScope" class="set-input"></select>
+      </div>
+      <div class="exam-field">
+        <label for="examPart">Which part</label>
+        <select id="examPart" class="set-input">
+          <option value="both">Meaning + Key fact</option>
+          <option value="meaning">Meaning only</option>
+          <option value="reading">Key fact only</option>
+        </select>
+      </div>
+      <p class="set-help" id="examCount"></p>
+      <button class="btn btn-primary" id="examStart">Start exam →</button>
+    </div>
+  </section>
 </div>
 
 <!-- Login overlay -->
@@ -1075,30 +1106,6 @@
   </div>
 </div>
 
-<!-- Exam / cram mode -->
-<div class="modal" id="exam">
-  <div class="sheet setsheet">
-    <div class="top drug"><div class="big" style="font-size:30px">📝 Exam mode</div></div>
-    <div class="body">
-      <p class="set-help" style="margin-top:0">Drill items you’ve already unlocked, as many times as you like. This is pure practice — it never changes your SRS stages or due times.</p>
-      <div class="set-row">
-        <label for="examScope">What to drill</label>
-        <select id="examScope" class="set-input"></select>
-      </div>
-      <div class="set-row" style="border-bottom:none">
-        <label for="examPart">Which part</label>
-        <select id="examPart" class="set-input">
-          <option value="both">Meaning + Key fact</option>
-          <option value="meaning">Meaning only</option>
-          <option value="reading">Key fact only</option>
-        </select>
-        <p class="set-help" id="examCount" style="margin:9px 0 0"></p>
-      </div>
-    </div>
-    <button class="close" id="examStart" style="color:var(--drug)">Start exam →</button>
-  </div>
-</div>
-
 <!-- Study settings -->
 <div class="modal" id="settings">
   <div class="sheet setsheet">
@@ -1156,7 +1163,7 @@
       <div class="kbrow"><kbd>M</kbd><span>Quick review, meaning only</span></div>
       <div class="kbrow"><kbd>K</kbd><span>Quick review, reading only</span></div>
       <div class="kbrow"><kbd>C</kbd><span>Study critical items</span></div>
-      <div class="kbrow"><kbd>E</kbd><span>Exam mode (cram unlocked items)</span></div>
+      <div class="kbrow"><kbd>E</kbd><span>Exam mode (free study, no SRS)</span></div>
       <h4>During a lesson reading</h4>
       <div class="kbrow"><kbd>←</kbd><kbd>→</kbd><span>Previous / next item</span></div>
       <div class="kbrow"><kbd>Enter</kbd><kbd>Space</kbd><span>Continue (start quiz on last card)</span></div>
@@ -2137,15 +2144,17 @@ function switchTab(tab){
   $('#dash').style.display   = tab==='dash'?'block':'none';
   $('#levels').style.display = tab==='levels'?'block':'none';
   $('#browse').style.display = tab==='browse'?'block':'none';
+  $('#exam').style.display   = tab==='exam'?'block':'none';
   if(tab==='levels') renderLevels();
   if(tab==='browse'){ renderBrowse(); if(!isTouch) $('#searchInput').focus(); }  // don't force keyboard open on phones
+  if(tab==='exam') renderExam();
   window.scrollTo(0,0);
   const w=$('#'+tab); w.classList.remove('tab-in'); void w.offsetWidth; w.classList.add('tab-in');  // retrigger crossfade
 }
 $$('.tab-btn').forEach(b=>{ b.onclick=()=>switchTab(b.dataset.tab); });
 
 /* ---- Global / dashboard keyboard shortcuts + help (?) ---- */
-function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal','#settings','#exam'].some(s=>$(s).classList.contains('show')); }
+function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal','#settings'].some(s=>$(s).classList.contains('show')); }
 function typingField(){ const a=document.activeElement; return a && ['searchInput','loginUser','loginPass','ansInput'].includes(a.id); }
 function toggleHelp(force){
   const open = force===undefined ? !$('#kbhelp').classList.contains('show') : force;
@@ -2198,41 +2207,41 @@ $('#setAuto').onchange=e=>{ setSetting('autoAdvance', e.target.checked); $('#set
 $('#setSpeed').onchange=e=>{ setSetting('autoAdvanceMs', e.target.value); };
 $('#setSrs').onchange=e=>{ setSetting('srsSpeed', e.target.value); updateSrsNote(); };
 
-/* ---- exam / cram mode (drills unlocked items, no SRS change) ---- */
-function examEligible(scope){            // scope: 'all' or a level number
-  return ITEMS.filter(i=>{
-    if(itemState(i.id).stage < 1) return false;            // must be learned/unlocked
-    return scope==='all' ? true : i.level===scope;
-  });
+/* ---- exam / free-study mode (drills any items, no SRS change) ---- */
+function examEligible(scope){
+  if(scope==='everything') return ITEMS.slice();                       // whole curriculum
+  if(scope==='learned')    return ITEMS.filter(i=>itemState(i.id).stage>=1);
+  const L=parseInt(scope,10);                                          // a single level (all of it)
+  return ITEMS.filter(i=>i.level===L);
 }
-function examScopeValue(){ const v=$('#examScope').value; return v==='all'?'all':parseInt(v,10); }
 function updateExamCount(){
-  const items=examEligible(examScopeValue());
+  const scope=$('#examScope').value;
+  const items=examEligible(scope);
   const part=$('#examPart').value;
-  const n = part==='reading' ? items.filter(i=>i.reading).length : items.length;
-  $('#examCount').textContent = n ? `${n} item${n>1?'s':''} in this drill.` : 'Nothing learned in this scope yet.';
+  const drilled = part==='reading' ? items.filter(i=>i.reading) : items;
+  const n = drilled.length;
+  const locked = drilled.filter(i=>itemState(i.id).stage<1).length;
+  let msg = n ? `${n} item${n>1?'s':''} in this drill.` : 'No items in this scope.';
+  if(n && locked) msg += ` Includes ${locked} you haven’t unlocked yet.`;
+  $('#examCount').textContent = msg;
   $('#examStart').toggleAttribute('disabled', n===0);
 }
-function openExam(){
-  // scope options: All learned + each level (1..current) that has learned items
-  const learnedLevels=[];
-  for(let L=1; L<=state.level; L++){ if(ITEMS.some(i=>i.level===L && itemState(i.id).stage>=1)) learnedLevels.push(L); }
-  $('#examScope').innerHTML = `<option value="all">All learned items</option>`+
-    learnedLevels.map(L=>`<option value="${L}">Level ${L}</option>`).join('');
-  $('#examPart').value='both';
+function renderExam(){
+  // everything + only-learned + every level in the curriculum
+  let opts = `<option value="everything">Everything (all ${ITEMS.length} items)</option>`+
+             `<option value="learned">Only items I’ve learned</option>`;
+  for(let L=1; L<=MAX_LEVEL; L++) opts += `<option value="${L}">Level ${L}</option>`;
+  if($('#examScope').innerHTML !== opts) $('#examScope').innerHTML = opts;
+  if(!$('#examScope').value) $('#examScope').value='everything';
   updateExamCount();
-  $('#exam').classList.add('show');
 }
-function closeExam(){ $('#exam').classList.remove('show'); }
 function startExam(){
-  const items=examEligible(examScopeValue());
-  if(!items.length){ toast('No learned items to drill yet.'); return; }
-  closeExam();
+  const items=examEligible($('#examScope').value);
+  if(!items.length){ toast('No items to drill in this scope.'); return; }
   startSession('practice', $('#examPart').value, items);
 }
-$('#examBtn').onclick=openExam;
 $('#examStart').onclick=startExam;
-$('#exam').onclick=e=>{ if(e.target.id==='exam') closeExam(); };
+$('#examToBrowse').onclick=()=>switchTab('browse');
 $('#examScope').onchange=updateExamCount;
 $('#examPart').onchange=updateExamCount;
 $('#setOrder').addEventListener('change', e=>{
@@ -2255,7 +2264,6 @@ applyTheme(currentTheme());   // sync the button to whatever the head script set
 $('#themeBtn').onclick=()=>{ const next=currentTheme()==='dark'?'light':'dark'; localStorage.setItem(THEME_KEY,next); applyTheme(next); };
 $('#kbhelp').onclick=e=>{ if(e.target.id==='kbhelp') toggleHelp(false); };
 document.addEventListener('keydown',e=>{
-  if($('#exam').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); closeExam(); } return; }
   if($('#settings').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); closeSettings(); } return; }
   if($('#kbhelp').classList.contains('show')){ if(e.key==='Escape'||e.key==='?'){ e.preventDefault(); toggleHelp(false); } return; }
   if(e.key==='?' && !typingField() && !$('#login').classList.contains('show')){ e.preventDefault(); toggleHelp(true); return; }
@@ -2265,6 +2273,7 @@ document.addEventListener('keydown',e=>{
   if(k==='1'){ switchTab('dash'); return; }
   if(k==='2'){ switchTab('levels'); return; }
   if(k==='3'){ switchTab('browse'); return; }
+  if(k==='4'||k==='e'){ switchTab('exam'); return; }
   // action shortcuts only on the dashboard
   if($('#dash').style.display==='none') return;
   if(k==='l'){ if(!$('#btnLessons').hasAttribute('disabled')) startLessons(); }
@@ -2272,7 +2281,6 @@ document.addEventListener('keydown',e=>{
   else if(k==='m'){ if(!$('#qMeaning').hasAttribute('disabled')) startSession('practice','meaning'); }
   else if(k==='k'){ if(!$('#qReading').hasAttribute('disabled')) startSession('practice','reading'); }
   else if(k==='c'){ if(CRITICAL_ITEMS.length) startSession('practice','both',CRITICAL_ITEMS.slice()); }
-  else if(k==='e'){ openExam(); }
 });
 
 /* ---- Browse / search by body system ---- */
@@ -2331,7 +2339,7 @@ function setBrowseFocus(idx){
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && $('#modal').classList.contains('show')){ $('#modal').classList.remove('show'); return; }
   if($('#browse').style.display==='none') return;
-  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')||$('#settings').classList.contains('show')||$('#exam').classList.contains('show')) return;
+  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')||$('#settings').classList.contains('show')) return;
   const inInput = document.activeElement===$('#searchInput');
   if(e.key==='/' && !inInput){ e.preventDefault(); $('#searchInput').focus(); return; }
   if(inInput){
