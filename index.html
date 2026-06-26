@@ -880,6 +880,11 @@
       <button class="btn btn-secondary btn-sm" id="qReading"><b id="qReadingN">0</b> Reading</button>
       <span class="quicknote">doesn’t change SRS</span>
     </div>
+    <div class="quickrow">
+      <span class="quicklabel">Exam mode</span>
+      <button class="btn btn-secondary btn-sm" id="examBtn">📝 Cram unlocked items <kbd>E</kbd></button>
+      <span class="quicknote">drill everything you’ve learned, ignores SRS</span>
+    </div>
   </section>
 
   <section class="forecast" id="forecastWrap">
@@ -1070,6 +1075,30 @@
   </div>
 </div>
 
+<!-- Exam / cram mode -->
+<div class="modal" id="exam">
+  <div class="sheet setsheet">
+    <div class="top drug"><div class="big" style="font-size:30px">📝 Exam mode</div></div>
+    <div class="body">
+      <p class="set-help" style="margin-top:0">Drill items you’ve already unlocked, as many times as you like. This is pure practice — it never changes your SRS stages or due times.</p>
+      <div class="set-row">
+        <label for="examScope">What to drill</label>
+        <select id="examScope" class="set-input"></select>
+      </div>
+      <div class="set-row" style="border-bottom:none">
+        <label for="examPart">Which part</label>
+        <select id="examPart" class="set-input">
+          <option value="both">Meaning + Key fact</option>
+          <option value="meaning">Meaning only</option>
+          <option value="reading">Key fact only</option>
+        </select>
+        <p class="set-help" id="examCount" style="margin:9px 0 0"></p>
+      </div>
+    </div>
+    <button class="close" id="examStart" style="color:var(--drug)">Start exam →</button>
+  </div>
+</div>
+
 <!-- Study settings -->
 <div class="modal" id="settings">
   <div class="sheet setsheet">
@@ -1102,6 +1131,12 @@
         <span class="set-label">Review ordering</span>
         <div class="set-radios" id="setOrder"></div>
       </div>
+      <div class="set-row">
+        <label for="setSrs">SRS speed</label>
+        <p class="set-help">How fast items climb the SRS ladder. Faster intervals compress the schedule for exam crunches, but spacing reviews further apart is better for long-term memory.</p>
+        <select id="setSrs" class="set-input"></select>
+        <p class="set-help" id="setSrsNote" style="margin:7px 0 0"></p>
+      </div>
     </div>
     <button class="close" id="setClose">Done</button>
   </div>
@@ -1121,6 +1156,7 @@
       <div class="kbrow"><kbd>M</kbd><span>Quick review, meaning only</span></div>
       <div class="kbrow"><kbd>K</kbd><span>Quick review, reading only</span></div>
       <div class="kbrow"><kbd>C</kbd><span>Study critical items</span></div>
+      <div class="kbrow"><kbd>E</kbd><span>Exam mode (cram unlocked items)</span></div>
       <h4>During a lesson reading</h4>
       <div class="kbrow"><kbd>←</kbd><kbd>→</kbd><span>Previous / next item</span></div>
       <div class="kbrow"><kbd>Enter</kbd><kbd>Space</kbd><span>Continue (start quiz on last card)</span></div>
@@ -1205,9 +1241,10 @@ function save(){ try{ localStorage.setItem(userKey(), JSON.stringify(state)); }c
 /* ============================================================
    User settings (study preferences)
    ============================================================ */
-const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled', autoAdvance:false, autoAdvanceMs:500 };
+const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled', autoAdvance:false, autoAdvanceMs:500, srsSpeed:1 };
 const REVIEW_ORDERS = ['shuffled','apprentice','lowsrs','lowlevel'];
 const AUTO_SPEEDS = [300,500,900];
+const SRS_SPEEDS = [1, 0.5, 0.25];   // 1 = standard, 0.5 = fast (½ intervals), 0.25 = turbo (¼)
 /* Returns the live settings object, filling in any missing defaults. */
 function settings(){
   if(!state.settings) state.settings = Object.assign({}, SETTINGS_DEFAULTS);
@@ -1221,7 +1258,13 @@ function setSetting(key, val){
   else if(key==='reviewOrder'){ if(!REVIEW_ORDERS.includes(val)) val=SETTINGS_DEFAULTS.reviewOrder; }
   else if(key==='autoAdvance'){ val=!!val; }
   else if(key==='autoAdvanceMs'){ val=parseInt(val,10); if(!AUTO_SPEEDS.includes(val)) val=SETTINGS_DEFAULTS.autoAdvanceMs; }
+  else if(key==='srsSpeed'){ val=parseFloat(val); if(!SRS_SPEEDS.includes(val)) val=SETTINGS_DEFAULTS.srsSpeed; }
   s[key]=val; state.settings=s; save();
+}
+/* Effective hours for an SRS stage, scaled by the user's chosen speed. */
+function stageHours(stage){
+  const h=STAGES[stage].hours;
+  return h===Infinity ? Infinity : h*settings().srsSpeed;
 }
 
 /* ---- daily lesson tally (drives the "recommended daily max") ---- */
@@ -1437,7 +1480,7 @@ function advance(id, correct){
   let stage = s.stage;
   if(correct){ stage = Math.min(stage+1, STAGES.length-1); }
   else { stage = Math.max(stage-1, 1); } // never below Apprentice 1 once learned
-  const hrs = STAGES[stage].hours;
+  const hrs = stageHours(stage);
   const due = hrs===Infinity ? Infinity : now()+hrs*3600*1000;
   const rec = Object.assign({}, state.items[id], {stage, due});
   if(stage===STAGES.length-1 && !rec.burnedAt) rec.burnedAt = now();   // first time burned
@@ -1446,7 +1489,7 @@ function advance(id, correct){
 }
 function learn(id){
   state.items[id] = Object.assign({right:0,wrong:0,learnedAt:now()}, state.items[id],
-    {stage:LESSON_STAGE, due: now()+STAGES[LESSON_STAGE].hours*3600*1000, learnedAt: (state.items[id]&&state.items[id].learnedAt)||now()});
+    {stage:LESSON_STAGE, due: now()+stageHours(LESSON_STAGE)*3600*1000, learnedAt: (state.items[id]&&state.items[id].learnedAt)||now()});
   save();
   maybeLevelUp();
 }
@@ -2102,7 +2145,7 @@ function switchTab(tab){
 $$('.tab-btn').forEach(b=>{ b.onclick=()=>switchTab(b.dataset.tab); });
 
 /* ---- Global / dashboard keyboard shortcuts + help (?) ---- */
-function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal','#settings'].some(s=>$(s).classList.contains('show')); }
+function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal','#settings','#exam'].some(s=>$(s).classList.contains('show')); }
 function typingField(){ const a=document.activeElement; return a && ['searchInput','loginUser','loginPass','ansInput'].includes(a.id); }
 function toggleHelp(force){
   const open = force===undefined ? !$('#kbhelp').classList.contains('show') : force;
@@ -2129,9 +2172,20 @@ function renderSettings(){
   $('#setAuto').checked = !!s.autoAdvance;
   $('#setSpeedWrap').hidden = !s.autoAdvance;
   fillSelect($('#setSpeed'), AUTO_SPEEDS, s.autoAdvanceMs, v=> v===300?'Fast':v===900?'Relaxed':'Normal');
+  const srsLabel = v=> v===1?'Standard':v===0.5?'Fast (½ intervals)':'Turbo (¼ intervals)';
+  fillSelect($('#setSrs'), SRS_SPEEDS, s.srsSpeed, srsLabel);
+  updateSrsNote();
   $('#setOrder').innerHTML = ORDER_OPTS.map(o=>
     `<label class="set-opt${o.v===s.reviewOrder?' sel':''}"><input type="radio" name="revorder" value="${o.v}"${o.v===s.reviewOrder?' checked':''}>`+
     `<span><span class="set-opt-t">${o.t}</span><span class="set-opt-d">${o.d}</span></span></label>`).join('');
+}
+/* Show roughly how long the chosen SRS speed takes to reach Guru. */
+function updateSrsNote(){
+  const mult=settings().srsSpeed;
+  const hrsToGuru=(4+8+24+48)*mult;                 // 4 on-time Apprentice reviews
+  const days=hrsToGuru/24;
+  const txt = days>=1 ? days.toFixed(1).replace(/\.0$/,'')+' days' : Math.round(hrsToGuru)+' hours';
+  $('#setSrsNote').textContent = `≈ ${txt} of on-time reviews to take a new item to Guru`+(mult===1?'.':' (vs 3.5 days at Standard).');
 }
 function openSettings(){ renderSettings(); $('#settings').classList.add('show'); }
 function closeSettings(){ $('#settings').classList.remove('show'); }
@@ -2142,6 +2196,45 @@ $('#setBatch').onchange=e=>{ setSetting('lessonBatch', e.target.value); e.target
 $('#setDaily').onchange=e=>{ setSetting('dailyLessonMax', e.target.value); renderDashboard(); };
 $('#setAuto').onchange=e=>{ setSetting('autoAdvance', e.target.checked); $('#setSpeedWrap').hidden=!e.target.checked; };
 $('#setSpeed').onchange=e=>{ setSetting('autoAdvanceMs', e.target.value); };
+$('#setSrs').onchange=e=>{ setSetting('srsSpeed', e.target.value); updateSrsNote(); };
+
+/* ---- exam / cram mode (drills unlocked items, no SRS change) ---- */
+function examEligible(scope){            // scope: 'all' or a level number
+  return ITEMS.filter(i=>{
+    if(itemState(i.id).stage < 1) return false;            // must be learned/unlocked
+    return scope==='all' ? true : i.level===scope;
+  });
+}
+function examScopeValue(){ const v=$('#examScope').value; return v==='all'?'all':parseInt(v,10); }
+function updateExamCount(){
+  const items=examEligible(examScopeValue());
+  const part=$('#examPart').value;
+  const n = part==='reading' ? items.filter(i=>i.reading).length : items.length;
+  $('#examCount').textContent = n ? `${n} item${n>1?'s':''} in this drill.` : 'Nothing learned in this scope yet.';
+  $('#examStart').toggleAttribute('disabled', n===0);
+}
+function openExam(){
+  // scope options: All learned + each level (1..current) that has learned items
+  const learnedLevels=[];
+  for(let L=1; L<=state.level; L++){ if(ITEMS.some(i=>i.level===L && itemState(i.id).stage>=1)) learnedLevels.push(L); }
+  $('#examScope').innerHTML = `<option value="all">All learned items</option>`+
+    learnedLevels.map(L=>`<option value="${L}">Level ${L}</option>`).join('');
+  $('#examPart').value='both';
+  updateExamCount();
+  $('#exam').classList.add('show');
+}
+function closeExam(){ $('#exam').classList.remove('show'); }
+function startExam(){
+  const items=examEligible(examScopeValue());
+  if(!items.length){ toast('No learned items to drill yet.'); return; }
+  closeExam();
+  startSession('practice', $('#examPart').value, items);
+}
+$('#examBtn').onclick=openExam;
+$('#examStart').onclick=startExam;
+$('#exam').onclick=e=>{ if(e.target.id==='exam') closeExam(); };
+$('#examScope').onchange=updateExamCount;
+$('#examPart').onchange=updateExamCount;
 $('#setOrder').addEventListener('change', e=>{
   if(e.target.name!=='revorder') return;
   setSetting('reviewOrder', e.target.value);
@@ -2162,6 +2255,7 @@ applyTheme(currentTheme());   // sync the button to whatever the head script set
 $('#themeBtn').onclick=()=>{ const next=currentTheme()==='dark'?'light':'dark'; localStorage.setItem(THEME_KEY,next); applyTheme(next); };
 $('#kbhelp').onclick=e=>{ if(e.target.id==='kbhelp') toggleHelp(false); };
 document.addEventListener('keydown',e=>{
+  if($('#exam').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); closeExam(); } return; }
   if($('#settings').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); closeSettings(); } return; }
   if($('#kbhelp').classList.contains('show')){ if(e.key==='Escape'||e.key==='?'){ e.preventDefault(); toggleHelp(false); } return; }
   if(e.key==='?' && !typingField() && !$('#login').classList.contains('show')){ e.preventDefault(); toggleHelp(true); return; }
@@ -2178,6 +2272,7 @@ document.addEventListener('keydown',e=>{
   else if(k==='m'){ if(!$('#qMeaning').hasAttribute('disabled')) startSession('practice','meaning'); }
   else if(k==='k'){ if(!$('#qReading').hasAttribute('disabled')) startSession('practice','reading'); }
   else if(k==='c'){ if(CRITICAL_ITEMS.length) startSession('practice','both',CRITICAL_ITEMS.slice()); }
+  else if(k==='e'){ openExam(); }
 });
 
 /* ---- Browse / search by body system ---- */
@@ -2236,7 +2331,7 @@ function setBrowseFocus(idx){
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && $('#modal').classList.contains('show')){ $('#modal').classList.remove('show'); return; }
   if($('#browse').style.display==='none') return;
-  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')||$('#settings').classList.contains('show')) return;
+  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')||$('#settings').classList.contains('show')||$('#exam').classList.contains('show')) return;
   const inInput = document.activeElement===$('#searchInput');
   if(e.key==='/' && !inInput){ e.preventDefault(); $('#searchInput').focus(); return; }
   if(inInput){
