@@ -856,8 +856,8 @@
     <h1 class="today-headline" id="todayHeadline">Loading…</h1>
     <p class="today-sub" id="todaySub"></p>
     <div class="today-actions">
-      <button class="btn btn-primary" id="btnReviews"><img class="btn-img" src="art/mascot.png" alt="" onerror="this.remove()"><span class="btn-label">Start reviews <kbd>R</kbd></span></button>
-      <button class="btn btn-secondary" id="btnLessons"><img class="btn-img" src="art/lesson.png" alt="" onerror="this.remove()"><span class="btn-label">Lessons <kbd>L</kbd></span></button>
+      <button class="btn btn-primary" id="btnReviews"><img class="btn-img" src="mascot.png" alt="" onerror="this.remove()"><span class="btn-label">Start reviews <kbd>R</kbd></span></button>
+      <button class="btn btn-secondary" id="btnLessons"><img class="btn-img" src="lesson.png" alt="" onerror="this.remove()"><span class="btn-label">Lessons <kbd>L</kbd></span></button>
     </div>
     <button class="btn btn-ghost btn-sm" id="btnLessonMore" style="display:none;margin-top:var(--s2)">Learn anyway →</button>
     <div class="quickrow" id="quickRow">
@@ -1641,11 +1641,11 @@ function renderDashboard(){
 
   // ---- recently unlocked / critical / burned ----
   fillChips('recentUnlocked', recentItems('learnedAt',30), 'Start a lesson to unlock your first items.');
-  fillChips('recentBurned', recentItems('burnedAt',30), 'Keep learning, we’ll tend to the fire.', null, 'art/burned.png');
+  fillChips('recentBurned', recentItems('burnedAt',30), 'Keep learning, we’ll tend to the fire.', null, 'burned.png');
   const crit=criticalItems();
   $('#critSub').textContent = crit.length ? crit.length : '';
   fillChips('criticalList', crit.map(c=>c.item), 'No critical items. Nice work!',
-    i=>{ const c=crit.find(x=>x.item.id===i.id); return c?` · ${Math.round(c.acc*100)}% correct`:''; }, 'art/mistakes.png');
+    i=>{ const c=crit.find(x=>x.item.id===i.id); return c?` · ${Math.round(c.acc*100)}% correct`:''; }, 'mistakes.png');
   CRITICAL_ITEMS=crit.map(c=>c.item);
   $('#studyCritical').style.display = crit.length ? 'inline-flex' : 'none';
 }
