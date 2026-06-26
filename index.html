@@ -386,6 +386,25 @@
     border:1px solid var(--line);border-radius:8px;padding:9px 11px;resize:vertical;outline:none;box-sizing:border-box}
   .note-edit:focus{border-color:var(--stem)}
   .note-edit::placeholder{color:var(--muted)}
+
+  /* settings modal */
+  .setsheet{max-width:460px}
+  .set-row{padding:14px 0;border-bottom:1px solid var(--line)}
+  .set-row:last-child{border-bottom:none;padding-bottom:4px}
+  .set-row>label,.set-row .set-label{display:block;font-size:15px;font-weight:700;color:var(--ink);text-transform:none;letter-spacing:0;margin:0}
+  .set-help{font-size:13px;color:var(--muted);margin:3px 0 9px}
+  .set-input{width:100%;font-family:inherit;font-size:16px;color:var(--ink);background:var(--surface);
+    border:1.5px solid var(--line);border-radius:8px;padding:9px 11px;outline:none;cursor:pointer}
+  .set-input:focus{border-color:var(--stem)}
+  .set-radios{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+  .set-opt{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:10px;
+    padding:10px 12px;cursor:pointer;transition:border-color .12s var(--ease-out-quart),background .12s var(--ease-out-quart)}
+  .set-opt:hover{border-color:var(--stem)}
+  .set-opt.sel{border-color:var(--stem);background:color-mix(in srgb,var(--stem) 8%,var(--surface))}
+  .set-opt input{margin-top:3px;accent-color:var(--stem);flex:none}
+  .set-opt>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+  .set-opt .set-opt-t{display:block;font-size:14px;font-weight:650;color:var(--ink);line-height:1.3}
+  .set-opt .set-opt-d{display:block;font-size:12.5px;color:var(--muted);line-height:1.45}
   .sheet .close{display:block;width:100%;border:none;border-top:1px solid var(--line);background:var(--subtle);color:var(--ink);padding:14px;font-weight:700;cursor:pointer;font-size:15px;font-family:inherit}
   .badge{display:inline-block;font-size:12px;font-weight:700;padding:3px 10px;border-radius:12px;color:#fff;margin-top:8px}
 
@@ -549,6 +568,7 @@
   </nav>
   <div class="spacer"></div>
   <button id="themeBtn" class="icon-btn on-dark" title="Toggle dark mode" aria-label="Toggle dark mode">☾</button>
+  <button id="settingsBtn" class="icon-btn on-dark" title="Study settings" aria-label="Study settings">⚙</button>
   <button id="kbBtn" class="icon-btn on-dark" title="Keyboard shortcuts (?)" aria-label="Keyboard shortcuts">⌨</button>
   <div class="lvl" id="hdrLevel">Level 1</div>
   <div class="userchip"><span id="syncStat" class="syncstat" title="Cloud sync status"></span><span id="userName">Guest</span><button id="logoutBtn" title="Log out">⎋</button></div>
@@ -836,9 +856,10 @@
     <h1 class="today-headline" id="todayHeadline">Loading…</h1>
     <p class="today-sub" id="todaySub"></p>
     <div class="today-actions">
-      <button class="btn btn-primary" id="btnReviews"><img class="btn-img" src="mascot.png" alt="" onerror="this.remove()"><span class="btn-label">Start reviews <kbd>R</kbd></span></button>
-      <button class="btn btn-secondary" id="btnLessons"><img class="btn-img" src="lesson.png" alt="" onerror="this.remove()"><span class="btn-label">Lessons <kbd>L</kbd></span></button>
+      <button class="btn btn-primary" id="btnReviews"><img class="btn-img" src="art/mascot.png" alt="" onerror="this.remove()"><span class="btn-label">Start reviews <kbd>R</kbd></span></button>
+      <button class="btn btn-secondary" id="btnLessons"><img class="btn-img" src="art/lesson.png" alt="" onerror="this.remove()"><span class="btn-label">Lessons <kbd>L</kbd></span></button>
     </div>
+    <button class="btn btn-ghost btn-sm" id="btnLessonMore" style="display:none;margin-top:var(--s2)">Learn anyway →</button>
     <div class="quickrow" id="quickRow">
       <span class="quicklabel">Quick practice</span>
       <button class="btn btn-secondary btn-sm" id="qMeaning"><b id="qMeaningN">0</b> Meaning</button>
@@ -1035,6 +1056,30 @@
   </div>
 </div>
 
+<!-- Study settings -->
+<div class="modal" id="settings">
+  <div class="sheet setsheet">
+    <div class="top stem"><div class="big" style="font-size:30px">⚙ Study settings</div></div>
+    <div class="body">
+      <div class="set-row">
+        <label for="setBatch">Preferred lesson batch size</label>
+        <p class="set-help">How many new lessons you’re taught per sitting before the quiz.</p>
+        <select id="setBatch" class="set-input"></select>
+      </div>
+      <div class="set-row">
+        <label for="setDaily">Maximum recommended daily lessons</label>
+        <p class="set-help">A soft daily target. You can always “Learn anyway” past it.</p>
+        <select id="setDaily" class="set-input"></select>
+      </div>
+      <div class="set-row">
+        <span class="set-label">Review ordering</span>
+        <div class="set-radios" id="setOrder"></div>
+      </div>
+    </div>
+    <button class="close" id="setClose">Done</button>
+  </div>
+</div>
+
 <!-- Keyboard shortcuts help -->
 <div class="modal" id="kbhelp">
   <div class="sheet kbsheet">
@@ -1130,6 +1175,44 @@ function load(){
 }
 function save(){ try{ localStorage.setItem(userKey(), JSON.stringify(state)); }catch(e){} cloudPush(); }
 
+/* ============================================================
+   User settings (study preferences)
+   ============================================================ */
+const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled' };
+const REVIEW_ORDERS = ['shuffled','apprentice','lowsrs','lowlevel'];
+/* Returns the live settings object, filling in any missing defaults. */
+function settings(){
+  if(!state.settings) state.settings = Object.assign({}, SETTINGS_DEFAULTS);
+  else state.settings = Object.assign({}, SETTINGS_DEFAULTS, state.settings);
+  return state.settings;
+}
+function setSetting(key, val){
+  const s = settings();
+  if(key==='lessonBatch'){ val=Math.max(1, Math.min(50, parseInt(val,10)||SETTINGS_DEFAULTS.lessonBatch)); }
+  else if(key==='dailyLessonMax'){ val=Math.max(0, parseInt(val,10)); if(isNaN(val)) val=SETTINGS_DEFAULTS.dailyLessonMax; }  // 0 = unlimited
+  else if(key==='reviewOrder'){ if(!REVIEW_ORDERS.includes(val)) val=SETTINGS_DEFAULTS.reviewOrder; }
+  s[key]=val; state.settings=s; save();
+}
+
+/* ---- daily lesson tally (drives the "recommended daily max") ---- */
+function lessonsDoneToday(){
+  const log=state.lessonLog;
+  return (log && log.day===dayStr()) ? (log.count||0) : 0;
+}
+function logLessonsLearned(n){
+  const today=dayStr();
+  let log=state.lessonLog;
+  if(!log || log.day!==today) log={day:today, count:0};
+  log.count=(log.count||0)+n;
+  state.lessonLog=log;
+}
+/* How many new lessons are still recommended today (Infinity if unlimited). */
+function dailyLessonsRemaining(){
+  const max=settings().dailyLessonMax;
+  if(!max) return Infinity;                 // 0 = unlimited
+  return Math.max(0, max - lessonsDoneToday());
+}
+
 /* ---- daily streak ---- */
 function dayStr(ts){ const d=ts?new Date(ts):new Date();
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
@@ -1224,6 +1307,14 @@ function mergeState(a, b){
     out.items[id] = rec;
   });
   if(a.streak || b.streak) out.streak = bestStreak(a.streak, b.streak);
+  if(a.settings || b.settings) out.settings = Object.assign({}, b.settings, a.settings);  // local prefs win
+  // keep today's lesson tally with the higher count; otherwise the most recent day
+  const la=a.lessonLog, lb=b.lessonLog;
+  if(la||lb){
+    if(!la) out.lessonLog=lb; else if(!lb) out.lessonLog=la;
+    else if(la.day===lb.day) out.lessonLog={day:la.day, count:Math.max(la.count||0, lb.count||0)};
+    else out.lessonLog = la.day>=lb.day ? la : lb;
+  }
   return out;
 }
 
@@ -1286,6 +1377,29 @@ function reviewsQueue(){
     const s = itemState(i.id);
     return s.stage>=1 && s.stage<STAGES.length-1 && s.due<=t;
   });
+}
+
+/* Rank SRS stage-groups from most→least likely to be forgotten. */
+const GRP_RANK = { apprentice:0, guru:1, master:2, enlightened:3, burned:4, locked:5 };
+function grpRankOf(item){ return GRP_RANK[STAGES[itemState(item.id).stage].grp] ?? 9; }
+/* Order review items per the user's "review ordering" preference. A random
+   tiebreaker keeps things mixed within each priority group. */
+function orderReviewItems(items){
+  const order = settings().reviewOrder;
+  const dec = items.map(it=>({it, r:Math.random()}));
+  let cmp;
+  switch(order){
+    case 'apprentice':                                   // Apprentice items first, rest random
+      cmp=(a,b)=>((grpRankOf(a.it)===0?0:1)-(grpRankOf(b.it)===0?0:1)) || a.r-b.r; break;
+    case 'lowsrs':                                        // Apprentice → Guru → Master → Enlightened
+      cmp=(a,b)=>(grpRankOf(a.it)-grpRankOf(b.it)) || a.r-b.r; break;
+    case 'lowlevel':                                      // lower levels first, else random
+      cmp=(a,b)=>((a.it.level||0)-(b.it.level||0)) || a.r-b.r; break;
+    case 'shuffled':
+    default:
+      cmp=(a,b)=>a.r-b.r; break;
+  }
+  return dec.sort(cmp).map(x=>x.it);
 }
 
 function advance(id, correct){
@@ -1425,23 +1539,34 @@ function renderDashboard(){
     sc.title = strk.best>strk.count ? `Best streak: ${strk.best} days` : 'Keep it going — come back tomorrow!';
   }else{ sc.hidden=true; }
   const lq = lessonsQueue(), rq = reviewsQueue();
-  const rv = rq.length, ls = lq.length;
+  const rv = rq.length, lsAvail = lq.length;
+  const rec = dailyLessonsRemaining();                       // Infinity if unlimited
+  const ls = Math.min(lsAvail, rec===Infinity?lsAvail:rec);  // recommended to do now
+  const capped = lsAvail>0 && ls===0;                        // daily goal met, more remain
 
   // ---- hero: lead with the day's work, one primary action ----
-  const bR=$('#btnReviews'), bL=$('#btnLessons'), hl=$('#todayHeadline'), sub=$('#todaySub');
+  const bR=$('#btnReviews'), bL=$('#btnLessons'), bMore=$('#btnLessonMore'), hl=$('#todayHeadline'), sub=$('#todaySub');
   bR.toggleAttribute('disabled', rv===0);
   bL.toggleAttribute('disabled', ls===0);
+  bMore.style.display = capped ? 'inline-flex' : 'none';
+  const dailyMax=settings().dailyLessonMax;
   const setPrimary = btn=>{ [bR,bL].forEach(b=>{ b.classList.remove('btn-primary'); b.classList.add('btn-secondary'); });
     btn.classList.remove('btn-secondary'); btn.classList.add('btn-primary'); };
   if(rv>0){
     hl.innerHTML=`<span class="hl">${rv}</span> review${rv>1?'s':''} ready`;
-    sub.textContent = ls>0 ? `${ls} new lesson${ls>1?'s':''} waiting too.` : 'Clear your queue to keep the momentum going.';
+    sub.textContent = ls>0 ? `${ls} new lesson${ls>1?'s':''} waiting too.`
+                    : capped ? `Daily lesson goal of ${dailyMax} reached — ${lsAvail} more available.`
+                    : 'Clear your queue to keep the momentum going.';
     setPrimary(bR);
   }else if(ls>0){
     hl.innerHTML=`<span class="hl">${ls}</span> lesson${ls>1?'s':''} to learn`;
     const nd=nextDueTime();
     sub.textContent = nd ? `Reviews resume ${relTime(nd)}.` : 'Learn these, and reviews will follow.';
     setPrimary(bL);
+  }else if(capped){
+    hl.textContent='Daily lesson goal reached 🎉';
+    sub.textContent = `You’ve done ${lessonsDoneToday()} lesson${lessonsDoneToday()>1?'s':''} today. ${lsAvail} more are available if you want to push on.`;
+    setPrimary(bR);
   }else{
     hl.textContent='You’re all caught up';
     const nd=nextDueTime();
@@ -1516,11 +1641,11 @@ function renderDashboard(){
 
   // ---- recently unlocked / critical / burned ----
   fillChips('recentUnlocked', recentItems('learnedAt',30), 'Start a lesson to unlock your first items.');
-  fillChips('recentBurned', recentItems('burnedAt',30), 'Keep learning, we’ll tend to the fire.', null, 'burned.png');
+  fillChips('recentBurned', recentItems('burnedAt',30), 'Keep learning, we’ll tend to the fire.', null, 'art/burned.png');
   const crit=criticalItems();
   $('#critSub').textContent = crit.length ? crit.length : '';
   fillChips('criticalList', crit.map(c=>c.item), 'No critical items. Nice work!',
-    i=>{ const c=crit.find(x=>x.item.id===i.id); return c?` · ${Math.round(c.acc*100)}% correct`:''; }, 'mistakes.png');
+    i=>{ const c=crit.find(x=>x.item.id===i.id); return c?` · ${Math.round(c.acc*100)}% correct`:''; }, 'art/mistakes.png');
   CRITICAL_ITEMS=crit.map(c=>c.item);
   $('#studyCritical').style.display = crit.length ? 'inline-flex' : 'none';
 }
@@ -1663,7 +1788,9 @@ function buildQuestions(item, mode){
    explicit: optional array of items to drill (otherwise drawn from queue) */
 function startSession(mode, filter, explicit){
   filter = filter||'both';
-  const src = explicit || (mode==='lessons'? lessonsQueue() : reviewsQueue());
+  let src = explicit || (mode==='lessons'? lessonsQueue() : reviewsQueue());
+  // apply the user's review-ordering preference to a normal review queue
+  if(mode==='reviews' && !explicit) src = orderReviewItems(src);
   let cards=[]; const track={}; let items=0;
   src.forEach(item=>{
     let qs=buildQuestions(item,mode);
@@ -1675,7 +1802,9 @@ function startSession(mode, filter, explicit){
     qs.forEach(q=> cards.push({item, q}));
   });
   if(cards.length===0) return;
-  for(let i=cards.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[cards[i],cards[j]]=[cards[j],cards[i]];}
+  // ordered reviews keep their priority order; everything else is fully shuffled
+  const keepOrder = (mode==='reviews' && !explicit && settings().reviewOrder!=='shuffled');
+  if(!keepOrder){ for(let i=cards.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[cards[i],cards[j]]=[cards[j],cards[i]];} }
   session={mode, filter, cards, track, pos:0, total:items, completed:0, correct:0};
   const label = mode==='lessons'?'Lessons':mode==='practice'?'Practice':'Reviews';
   const fl = filter==='meaning'?' · meaning':filter==='reading'?' · reading':'';
@@ -1756,7 +1885,7 @@ function advanceCard(correct){
     session.cards.splice(session.pos,1);          // card cleared
     const t=session.track[item.id];
     if(--t.remaining<=0){                          // all chosen parts done → finalize item
-      if(session.mode==='lessons') learn(item.id);
+      if(session.mode==='lessons'){ logLessonsLearned(1); learn(item.id); }
       else if(session.mode==='reviews') advance(item.id, !t.wrong);
       // 'practice' mode: no SRS change
       session.completed++;
@@ -1848,10 +1977,15 @@ function quitSession(){ if(confirm('Quit this session? Finished items are saved;
 /* ---- Reading-before-lesson teaching flow ----
    Show each new item's meaning/key fact/mnemonic/details, then run the quiz. */
 let lessonItems=[], lessonIdx=0;
-function startLessons(){
-  const items=lessonsQueue();
-  if(!items.length) return;
-  lessonItems=items; lessonIdx=0;
+/* ignoreDaily=true bypasses the recommended daily cap ("Learn anyway"). */
+function startLessons(ignoreDaily){
+  const queue=lessonsQueue();
+  if(!queue.length) return;
+  const batch=settings().lessonBatch;
+  const remaining=ignoreDaily ? Infinity : dailyLessonsRemaining();
+  const take=Math.max(0, Math.min(batch, queue.length, remaining));
+  if(take<=0) return;                     // daily recommendation already met
+  lessonItems=queue.slice(0, take); lessonIdx=0;
   $('#lesson').classList.add('show');
   showLessonCard();
 }
@@ -1888,6 +2022,7 @@ $('#lessonQuit').onclick=()=>{ if(confirm('Close the lesson? You can restart it 
    Wiring
    ============================================================ */
 $('#btnLessons').onclick=()=>startLessons();
+$('#btnLessonMore').onclick=()=>startLessons(true);
 $('#btnReviews').onclick=()=>startSession('reviews');
 $('#qMeaning').onclick=()=>{ if(!$('#qMeaning').hasAttribute('disabled')) startSession('practice','meaning'); };
 $('#qReading').onclick=()=>{ if(!$('#qReading').hasAttribute('disabled')) startSession('practice','reading'); };
@@ -1928,7 +2063,7 @@ function switchTab(tab){
 $$('.tab-btn').forEach(b=>{ b.onclick=()=>switchTab(b.dataset.tab); });
 
 /* ---- Global / dashboard keyboard shortcuts + help (?) ---- */
-function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal'].some(s=>$(s).classList.contains('show')); }
+function overlayOpen(){ return ['#session','#lesson','#summary','#login','#modal','#settings'].some(s=>$(s).classList.contains('show')); }
 function typingField(){ const a=document.activeElement; return a && ['searchInput','loginUser','loginPass','ansInput'].includes(a.id); }
 function toggleHelp(force){
   const open = force===undefined ? !$('#kbhelp').classList.contains('show') : force;
@@ -1936,6 +2071,38 @@ function toggleHelp(force){
 }
 $('#kbBtn').onclick=()=>toggleHelp(true);
 $('#kbClose').onclick=()=>toggleHelp(false);
+
+/* ---- study settings modal ---- */
+const ORDER_OPTS = [
+  {v:'shuffled',   t:'Shuffled',                d:'Random order. The best option if you’re clearing your review queue regularly.'},
+  {v:'apprentice', t:'Apprentice First',        d:'Prioritize Apprentice-stage items first, then randomize the rest. Good if you have limited time but are still studying regularly.'},
+  {v:'lowsrs',     t:'Lower SRS Stages First',  d:'Order by how likely you’re about to forget them: Apprentice → Guru → Master → Enlightened. A good option if you’re catching up or coming back from a break.'},
+  {v:'lowlevel',   t:'Lower Levels First',      d:'Still random, but prioritizes items from lower levels first. Use this to clear backlogs of older items or to prioritize leeches.'}
+];
+function fillSelect(sel, values, current, fmt){
+  const vals = values.includes(current) ? values : [current, ...values];
+  sel.innerHTML = vals.map(v=>`<option value="${v}"${v===current?' selected':''}>${fmt(v)}</option>`).join('');
+}
+function renderSettings(){
+  const s=settings();
+  fillSelect($('#setBatch'), [3,4,5,6,7,8,9,10,12,15], s.lessonBatch, v=>v+' lesson'+(v>1?'s':''));
+  fillSelect($('#setDaily'), [5,10,15,20,25,30,40,50,75,100,0], s.dailyLessonMax, v=> v===0?'Unlimited':v+' lessons');
+  $('#setOrder').innerHTML = ORDER_OPTS.map(o=>
+    `<label class="set-opt${o.v===s.reviewOrder?' sel':''}"><input type="radio" name="revorder" value="${o.v}"${o.v===s.reviewOrder?' checked':''}>`+
+    `<span><span class="set-opt-t">${o.t}</span><span class="set-opt-d">${o.d}</span></span></label>`).join('');
+}
+function openSettings(){ renderSettings(); $('#settings').classList.add('show'); }
+function closeSettings(){ $('#settings').classList.remove('show'); }
+$('#settingsBtn').onclick=openSettings;
+$('#setClose').onclick=closeSettings;
+$('#settings').onclick=e=>{ if(e.target.id==='settings') closeSettings(); };
+$('#setBatch').onchange=e=>{ setSetting('lessonBatch', e.target.value); };
+$('#setDaily').onchange=e=>{ setSetting('dailyLessonMax', e.target.value); renderDashboard(); };
+$('#setOrder').addEventListener('change', e=>{
+  if(e.target.name!=='revorder') return;
+  setSetting('reviewOrder', e.target.value);
+  $$('#setOrder .set-opt').forEach(l=>l.classList.toggle('sel', l.querySelector('input').checked));
+});
 
 /* ---- theme (dark / light) ---- */
 const THEME_KEY='wanipharm_theme';
@@ -1951,6 +2118,7 @@ applyTheme(currentTheme());   // sync the button to whatever the head script set
 $('#themeBtn').onclick=()=>{ const next=currentTheme()==='dark'?'light':'dark'; localStorage.setItem(THEME_KEY,next); applyTheme(next); };
 $('#kbhelp').onclick=e=>{ if(e.target.id==='kbhelp') toggleHelp(false); };
 document.addEventListener('keydown',e=>{
+  if($('#settings').classList.contains('show')){ if(e.key==='Escape'){ e.preventDefault(); closeSettings(); } return; }
   if($('#kbhelp').classList.contains('show')){ if(e.key==='Escape'||e.key==='?'){ e.preventDefault(); toggleHelp(false); } return; }
   if(e.key==='?' && !typingField() && !$('#login').classList.contains('show')){ e.preventDefault(); toggleHelp(true); return; }
   if(overlayOpen()||typingField()) return;
@@ -2024,7 +2192,7 @@ function setBrowseFocus(idx){
 document.addEventListener('keydown',e=>{
   if(e.key==='Escape' && $('#modal').classList.contains('show')){ $('#modal').classList.remove('show'); return; }
   if($('#browse').style.display==='none') return;
-  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')) return;
+  if($('#session').classList.contains('show')||$('#summary').classList.contains('show')||$('#modal').classList.contains('show')||$('#settings').classList.contains('show')) return;
   const inInput = document.activeElement===$('#searchInput');
   if(e.key==='/' && !inInput){ e.preventDefault(); $('#searchInput').focus(); return; }
   if(inInput){
