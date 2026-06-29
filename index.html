@@ -267,6 +267,19 @@
   .sys-label{flex:0 0 64px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:8px}
   .chip.kbfocus{outline:3px solid var(--ink);outline-offset:2px}
   kbd{background:var(--chip-bg);border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;font-size:11px;font-family:inherit;color:var(--muted)}
+  /* browse custom-lesson selection */
+  .browse-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .browse-hint{font-size:13px;color:var(--muted)}
+  #browse.selecting .chip{cursor:pointer}
+  .chip.selsel{outline:3px solid var(--stem);outline-offset:2px}
+  .chip.selsel::before{content:"✓";position:absolute;top:-7px;left:-7px;width:16px;height:16px;border-radius:50%;
+    background:var(--stem);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2;border:2px solid var(--card)}
+  .selbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    background:var(--surface);border:1px solid var(--stem);border-radius:10px;padding:9px 13px;margin-bottom:14px;
+    box-shadow:0 4px 14px rgba(0,0,0,.08)}
+  .selbar[hidden]{display:none}
+  .selbar-count{font-size:14px;color:var(--ink)} .selbar-count b{color:var(--stem)}
+  .selbar-actions{display:flex;gap:8px;align-items:center}
 
   /* quick-review row */
   .quickrow{display:flex;align-items:center;gap:var(--s2);flex-wrap:wrap;margin-top:var(--s5)}
@@ -970,11 +983,21 @@
     <span class="ico">🔍</span>
     <input id="searchInput" type="text" autocomplete="off" placeholder="Search drugs, classes, stems, effects… (e.g. MRSA, beta blocker, nephrotoxicity)">
   </div>
+  <div class="browse-tools">
+    <button class="btn btn-secondary btn-sm" id="browseSelectBtn">➕ Custom lesson</button>
+    <span class="browse-hint" id="browseHint">Tap an item for details. <kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear.</span>
+  </div>
+  <div class="selbar" id="selBar" hidden>
+    <span class="selbar-count"><b id="selCount">0</b> selected</span>
+    <div class="selbar-actions">
+      <button class="btn btn-ghost btn-sm" id="selClear">Clear</button>
+      <button class="btn btn-primary btn-sm" id="selStart" disabled>Start lesson →</button>
+    </div>
+  </div>
   <div class="legend">
     <span><i style="background:var(--stem)"></i>Stem</span>
     <span><i style="background:var(--class)"></i>Class</span>
     <span><i style="background:var(--drug)"></i>Drug</span>
-    <span>Tap an item for details. Keyboard: <kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear.</span>
   </div>
   <div id="browseList"></div>
 </div>
@@ -2065,7 +2088,7 @@ function quitSession(){ if(confirm('Quit this session? Finished items are saved;
 
 /* ---- Reading-before-lesson teaching flow ----
    Show each new item's meaning/key fact/mnemonic/details, then run the quiz. */
-let lessonItems=[], lessonIdx=0;
+let lessonItems=[], lessonIdx=0, lessonQuizMode='lessons';
 /* ignoreDaily=true bypasses the recommended daily cap ("Learn anyway"). */
 function startLessons(ignoreDaily){
   const queue=lessonsQueue();
@@ -2074,7 +2097,16 @@ function startLessons(ignoreDaily){
   const remaining=ignoreDaily ? Infinity : dailyLessonsRemaining();
   const take=Math.max(0, Math.min(batch, queue.length, remaining));
   if(take<=0) return;                     // daily recommendation already met
-  lessonItems=queue.slice(0, take); lessonIdx=0;
+  lessonItems=queue.slice(0, take); lessonIdx=0; lessonQuizMode='lessons';
+  $('#lesson').classList.add('show');
+  showLessonCard();
+}
+/* Custom lesson built from a Browse selection. Teaches the chosen items then
+   quizzes in PRACTICE mode, so it never alters the SRS stage of items you
+   already know — safe for any selection, learned or not. */
+function startCustomLesson(items){
+  if(!items || !items.length) return;
+  lessonItems=items.slice(); lessonIdx=0; lessonQuizMode='practice';
   $('#lesson').classList.add('show');
   showLessonCard();
 }
@@ -2100,7 +2132,7 @@ function showLessonCard(){
 function cap(s){ return s.replace(/\b\w/g,c=>c.toUpperCase()); }
 function lessonNext(){
   if(lessonIdx<lessonItems.length-1){ lessonIdx++; showLessonCard(); }
-  else { $('#lesson').classList.remove('show'); startSession('lessons','both',lessonItems); }
+  else { $('#lesson').classList.remove('show'); startSession(lessonQuizMode,'both',lessonItems); }
 }
 function lessonPrev(){ if(lessonIdx>0){ lessonIdx--; showLessonCard(); } }
 $('#lpNext').onclick=lessonNext;
@@ -2211,6 +2243,10 @@ $('#setSrs').onchange=e=>{ setSetting('srsSpeed', e.target.value); updateSrsNote
 function examEligible(scope){
   if(scope==='everything') return ITEMS.slice();                       // whole curriculum
   if(scope==='learned')    return ITEMS.filter(i=>itemState(i.id).stage>=1);
+  if(scope.indexOf('topic:')===0){                                     // a Browse topic (body system)
+    const sys=SYSTEMS[parseInt(scope.slice(6),10)];
+    return sys ? ITEMS.filter(i=>sys.levels.includes(i.level)) : [];
+  }
   const L=parseInt(scope,10);                                          // a single level (all of it)
   return ITEMS.filter(i=>i.level===L);
 }
@@ -2227,11 +2263,20 @@ function updateExamCount(){
   $('#examStart').toggleAttribute('disabled', n===0);
 }
 function renderExam(){
-  // everything + only-learned + every level in the curriculum
+  // everything + only-learned + by Browse topic + every level in the curriculum
   let opts = `<option value="everything">Everything (all ${ITEMS.length} items)</option>`+
              `<option value="learned">Only items I’ve learned</option>`;
+  opts += `<optgroup label="By topic">`;
+  SYSTEMS.forEach((sys,idx)=>{
+    const n=ITEMS.filter(i=>sys.levels.includes(i.level)).length;
+    opts += `<option value="topic:${idx}">${sys.name} (${n})</option>`;
+  });
+  opts += `</optgroup><optgroup label="By level">`;
   for(let L=1; L<=MAX_LEVEL; L++) opts += `<option value="${L}">Level ${L}</option>`;
+  opts += `</optgroup>`;
+  const prev=$('#examScope').value;
   if($('#examScope').innerHTML !== opts) $('#examScope').innerHTML = opts;
+  if(prev) $('#examScope').value=prev;            // keep the user's selection across re-renders
   if(!$('#examScope').value) $('#examScope').value='everything';
   updateExamCount();
 }
@@ -2309,7 +2354,8 @@ function renderBrowse(){
       if(!tps.length) return;
       html+=`<div class="sys-row"><span class="sys-label">${label}</span><div class="igrid">`;
       tps.forEach(i=>{
-        html+=`<div class="chip ${tp}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
+        const sel = customSel.has(i.id) ? ' selsel' : '';
+        html+=`<div class="chip ${tp}${sel}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
       });
       html+='</div></div>';
     });
@@ -2318,12 +2364,52 @@ function renderBrowse(){
   if(!html) html=`<p style="color:var(--muted);text-align:center;padding:48px 12px">No items match “${$('#searchInput').value}”.</p>`;
   $('#browseList').innerHTML=html;
   $$('#browseList .chip[data-item]').forEach(c=>{
-    c.onclick=()=>openModal(c.dataset.item);
-    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); openModal(c.dataset.item); } };
+    c.onclick=()=>chipActivate(c.dataset.item, c);
+    c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); chipActivate(c.dataset.item, c); } };
   });
   browseFocus=-1;
 }
 $('#searchInput').addEventListener('input', renderBrowse);
+
+/* ---- Browse custom-lesson selection ---- */
+let browseSelectMode=false;
+const customSel=new Set();
+function chipActivate(id, el){
+  if(browseSelectMode) toggleSel(id, el);
+  else openModal(id);
+}
+function toggleSel(id, el){
+  if(customSel.has(id)){ customSel.delete(id); el && el.classList.remove('selsel'); }
+  else { customSel.add(id); el && el.classList.add('selsel'); }
+  updateSelBar();
+}
+function updateSelBar(){
+  const n=customSel.size;
+  $('#selCount').textContent=n;
+  $('#selStart').toggleAttribute('disabled', n===0);
+}
+function setSelectMode(on){
+  browseSelectMode=on;
+  $('#browse').classList.toggle('selecting', on);
+  $('#selBar').hidden=!on;
+  $('#browseHint').innerHTML = on
+    ? 'Select items to build a custom lesson, then press <b>Start</b>. It’s pure practice — your SRS stays untouched.'
+    : 'Tap an item for details. <kbd>/</kbd> search · <kbd>↑↓←→</kbd> move · <kbd>Enter</kbd> open · <kbd>Esc</kbd> clear.';
+  $('#browseSelectBtn').textContent = on ? '✕ Cancel' : '➕ Custom lesson';
+  $('#browseSelectBtn').classList.toggle('btn-danger', on);
+  $('#browseSelectBtn').classList.toggle('btn-secondary', !on);
+  if(!on) customSel.clear();
+  updateSelBar();
+  renderBrowse();
+}
+$('#browseSelectBtn').onclick=()=>setSelectMode(!browseSelectMode);
+$('#selClear').onclick=()=>{ customSel.clear(); renderBrowse(); updateSelBar(); };
+$('#selStart').onclick=()=>{
+  if(!customSel.size) return;
+  const items=ITEMS.filter(i=>customSel.has(i.id));   // curriculum order
+  setSelectMode(false);
+  startCustomLesson(items);
+};
 
 /* ---- Browse keyboard navigation ----
    "/" focus search · ↑↓←→ move · Enter open · Esc clear/close */
@@ -2344,7 +2430,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='/' && !inInput){ e.preventDefault(); $('#searchInput').focus(); return; }
   if(inInput){
     if(e.key==='ArrowDown'){ e.preventDefault(); $('#searchInput').blur(); setBrowseFocus(0); }
-    else if(e.key==='Enter'){ const c=browseChipEls(); if(c.length){ e.preventDefault(); openModal(c[0].dataset.item); } }
+    else if(e.key==='Enter'){ const c=browseChipEls(); if(c.length){ e.preventDefault(); chipActivate(c[0].dataset.item, c[0]); } }
     return;
   }
   const chips=browseChipEls(); if(!chips.length) return;
@@ -2354,8 +2440,11 @@ document.addEventListener('keydown',e=>{
     if(browseFocus<=0){ chips.forEach(c=>c.classList.remove('kbfocus')); browseFocus=-1; $('#searchInput').focus(); }
     else setBrowseFocus(browseFocus-1);
   }
-  else if(e.key==='Enter' && browseFocus>=0){ e.preventDefault(); openModal(chips[browseFocus].dataset.item); }
-  else if(e.key==='Escape'){ $('#searchInput').value=''; renderBrowse(); $('#searchInput').focus(); }
+  else if(e.key==='Enter' && browseFocus>=0){ e.preventDefault(); chipActivate(chips[browseFocus].dataset.item, chips[browseFocus]); }
+  else if(e.key==='Escape'){
+    if(browseSelectMode){ setSelectMode(false); return; }   // Esc leaves selection mode first
+    $('#searchInput').value=''; renderBrowse(); $('#searchInput').focus();
+  }
 });
 $('#resetBtn').onclick=()=>{
   if(confirm('Reset ALL progress for this profile? This cannot be undone.')){
