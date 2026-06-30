@@ -263,6 +263,8 @@
   .sys-block{margin-bottom:22px}
   .sys-head{font-size:15px;font-weight:800;color:var(--ink);margin-bottom:10px;border-bottom:2px solid var(--line);padding-bottom:6px}
   .sys-head small{color:var(--muted);font-weight:600;font-size:12px}
+  .sys-sub{font-size:13px;font-weight:700;color:var(--ink);opacity:.85;margin:12px 0 6px;padding-left:2px}
+  .sys-sub small{color:var(--muted);font-weight:600;font-size:11px}
   .sys-row{display:flex;gap:10px;align-items:flex-start;margin-bottom:8px}
   .sys-label{flex:0 0 64px;font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:8px}
   .chip.kbfocus{outline:3px solid var(--ink);outline-offset:2px}
@@ -271,6 +273,9 @@
   .browse-tools{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
   .browse-hint{font-size:13px;color:var(--muted)}
   #browse.selecting .chip{cursor:pointer}
+  .btn-xs{font-size:11px;padding:2px 8px;border-radius:6px;line-height:1.4}
+  .sel-all-btn{display:none;margin-left:auto}
+  #browse.selecting .sel-all-btn{display:inline-flex}
   .chip.selsel{outline:3px solid var(--stem);outline-offset:2px}
   .chip.selsel::before{content:"✓";position:absolute;top:-7px;left:-7px;width:16px;height:16px;border-radius:50%;
     background:var(--stem);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;z-index:2;border:2px solid var(--card)}
@@ -1274,7 +1279,7 @@ function save(){ try{ localStorage.setItem(userKey(), JSON.stringify(state)); }c
 const SETTINGS_DEFAULTS = { lessonBatch:5, dailyLessonMax:15, reviewOrder:'shuffled', autoAdvance:false, autoAdvanceMs:500, srsSpeed:1 };
 const REVIEW_ORDERS = ['shuffled','apprentice','lowsrs','lowlevel'];
 const AUTO_SPEEDS = [300,500,900];
-const SRS_SPEEDS = [1, 0.5, 0.25];   // 1 = standard, 0.5 = fast (½ intervals), 0.25 = turbo (¼)
+const SRS_SPEEDS = [2, 1.5, 1, 0.75, 0.5, 0.33, 0.25];   // multiplier on interval length; <1 = faster reviews
 /* Returns the live settings object, filling in any missing defaults. */
 function settings(){
   if(!state.settings) state.settings = Object.assign({}, SETTINGS_DEFAULTS);
@@ -2213,7 +2218,7 @@ function renderSettings(){
   $('#setAuto').checked = !!s.autoAdvance;
   $('#setSpeedWrap').hidden = !s.autoAdvance;
   fillSelect($('#setSpeed'), AUTO_SPEEDS, s.autoAdvanceMs, v=> v===300?'Fast':v===900?'Relaxed':'Normal');
-  const srsLabel = v=> v===1?'Standard':v===0.5?'Fast (½ intervals)':'Turbo (¼ intervals)';
+  const srsLabel = v=>({2:'Relaxed (×2 intervals)',1.5:'Comfortable (×1.5)',1:'Standard',0.75:'Express (×¾)',0.5:'Fast (×½)',0.33:'Sprint (×⅓)',0.25:'Turbo (×¼)'}[v]||`×${v}`);
   fillSelect($('#setSrs'), SRS_SPEEDS, s.srsSpeed, srsLabel);
   updateSrsNote();
   $('#setOrder').innerHTML = ORDER_OPTS.map(o=>
@@ -2226,7 +2231,7 @@ function updateSrsNote(){
   const hrsToGuru=(4+8+24+48)*mult;                 // 4 on-time Apprentice reviews
   const days=hrsToGuru/24;
   const txt = days>=1 ? days.toFixed(1).replace(/\.0$/,'')+' days' : Math.round(hrsToGuru)+' hours';
-  $('#setSrsNote').textContent = `≈ ${txt} of on-time reviews to take a new item to Guru`+(mult===1?'.':' (vs 3.5 days at Standard).');
+  $('#setSrsNote').textContent = `≈ ${txt} of on-time reviews to reach Guru`+(mult===1?'.':' (Standard = 3.5 days).');
 }
 function openSettings(){ renderSettings(); $('#settings').classList.add('show'); }
 function closeSettings(){ $('#settings').classList.remove('show'); }
@@ -2241,13 +2246,14 @@ $('#setSrs').onchange=e=>{ setSetting('srsSpeed', e.target.value); updateSrsNote
 
 /* ---- exam / free-study mode (drills any items, no SRS change) ---- */
 function examEligible(scope){
-  if(scope==='everything') return ITEMS.slice();                       // whole curriculum
+  if(scope==='everything') return ITEMS.slice();
   if(scope==='learned')    return ITEMS.filter(i=>itemState(i.id).stage>=1);
-  if(scope.indexOf('topic:')===0){                                     // a Browse topic (body system)
-    const sys=SYSTEMS[parseInt(scope.slice(6),10)];
-    return sys ? ITEMS.filter(i=>sys.levels.includes(i.level)) : [];
+  if(scope.indexOf('topic:')===0){
+    const si=parseInt(scope.slice(6),10);
+    const sys=SYSTEMS[si];
+    return sys ? ITEMS.filter(sys.filter) : [];
   }
-  const L=parseInt(scope,10);                                          // a single level (all of it)
+  const L=parseInt(scope,10);
   return ITEMS.filter(i=>i.level===L);
 }
 function updateExamCount(){
@@ -2263,15 +2269,24 @@ function updateExamCount(){
   $('#examStart').toggleAttribute('disabled', n===0);
 }
 function renderExam(){
-  // everything + only-learned + by Browse topic + every level in the curriculum
   let opts = `<option value="everything">Everything (all ${ITEMS.length} items)</option>`+
              `<option value="learned">Only items I’ve learned</option>`;
-  opts += `<optgroup label="By topic">`;
-  SYSTEMS.forEach((sys,idx)=>{
-    const n=ITEMS.filter(i=>sys.levels.includes(i.level)).length;
-    opts += `<option value="topic:${idx}">${sys.name} (${n})</option>`;
+  /* Build topic options from the shared TAXONOMY. Parents with subcategories
+     become optgroups; single-subcategory parents become plain options. */
+  TAXONOMY.forEach(grp=>{
+    const total=grp.idxs.reduce((s,i)=>s+ITEMS.filter(SYSTEMS[i].filter).length,0);
+    if(grp.idxs.length===1){
+      opts+=`<option value="topic:${grp.idxs[0]}">${grp.name} (${total})</option>`;
+      return;
+    }
+    opts+=`<optgroup label="${grp.name} (${total})">`;
+    grp.idxs.forEach(i=>{
+      const n=ITEMS.filter(SYSTEMS[i].filter).length;
+      opts+=`<option value="topic:${i}">${SYSTEMS[i].name} (${n})</option>`;
+    });
+    opts+=`</optgroup>`;
   });
-  opts += `</optgroup><optgroup label="By level">`;
+  opts+=`<optgroup label="By level">`;
   for(let L=1; L<=MAX_LEVEL; L++) opts += `<option value="${L}">Level ${L}</option>`;
   opts += `</optgroup>`;
   const prev=$('#examScope').value;
@@ -2329,35 +2344,121 @@ document.addEventListener('keydown',e=>{
 });
 
 /* ---- Browse / search by body system ---- */
+/* Explicit category sets for autonomic subcategories */
+const CAT_PARASYMPATHOMIMETIC = new Set([
+  'ach','m2','m3','nicotinic','ache',
+  'musc_agonist','ache_inh','nic_agonist',
+  'bethanechol','pilocarpine','neostigmine','physostigmine','donepezil',
+  'carbachol','methacholine','cevimeline','edrophonium','pyridostigmine','rivastigmine',
+  'nicotine_drug','varenicline'
+]);
+const CAT_PARASYMPATHOLYTIC = new Set([
+  'musc_antag','nmj_blocker','organophosphate',
+  'atropine','ipratropium','tiotropium','scopolamine','oxybutynin','benztropine',
+  'succinylcholine','rocuronium','atracurium','pralidoxime','botulinum'
+]);
+const CAT_SYMPATHOMIMETIC = new Set([
+  'ne','a1','b1','b2','b3','d1',
+  'a1_agonist','b2_agonist','catecholamine',
+  'phenylephrine','salbutamol','salmeterol','epinephrine','ne_drug','dopamine','dobutamine',
+  'isoproterenol','terbutaline','oxymetazoline','mirabegron',
+  'amphetamine','methylphenidate','ephedrine','pseudoephedrine','midodrine'
+]);
+const CAT_SYMPATHOLYTIC = new Set([
+  'olol','a2',
+  'a_blocker','a2_central','bblocker','mixed_blocker','neuron_blocker',
+  'prazosin','tamsulosin','phenoxybenzamine','doxazosin','phentolamine',
+  'clonidine','methyldopa','brimonidine',
+  'propranolol','metoprolol','atenolol','timolol','carvedilol','labetalol',
+  'bisoprolol','esmolol','pindolol','nebivolol',
+  'reserpine','guanethidine','metyrosine'
+]);
+const CAT_BETALACTAM = new Set([
+  'bactericidal','bacteriostatic','betalactam','cillin',
+  'penicillins','cephalosporins','carbapenems','glycopeptides','blactamase_inh','polymyxins',
+  'amoxicillin','cloxacillin','piperacillin','cefazolin','ceftriaxone','ceftazidime','cefepime',
+  'imipenem','meropenem','vancomycin','aztreonam',
+  'ampicillin','clavulanate','tazobactam','cefuroxime','ceftaroline','colistin'
+]);
+const CAT_METABOLISM = new Set([
+  'floxacin','folate',
+  'fluoroquinolones','folate_inhibitors','nitroimidazoles','rifamycins',
+  'ciprofloxacin','levofloxacin','moxifloxacin','norfloxacin',
+  'sulfamethoxazole','trimethoprim','cotrimoxazole','sulfasalazine','silver_sulfadiazine',
+  'metronidazole','rifampin'
+]);
+const CAT_PROTEINSYN = new Set([
+  'r30s','r50s',
+  'aminoglycosides','tetracyclines','macrolides','lincosamides','amphenicols','oxazolidinones',
+  'gentamicin','amikacin','streptomycin','tobramycin',
+  'doxycycline','tigecycline','tetracycline_drug','minocycline',
+  'azithromycin','erythromycin','clarithromycin',
+  'clindamycin','chloramphenicol','linezolid'
+]);
+
+/* Flat SYSTEMS — one entry per leaf category; grouped via TAXONOMY */
 const SYSTEMS=[
-  {name:'Autonomic: Cholinergic', levels:[1,2]},
-  {name:'Autonomic: Adrenergic & Cardiovascular', levels:[3,4,5]},
-  {name:'Antibiotics', levels:[6,7,8]},
-  {name:'Antifungals', levels:[9]},
-  {name:'Antivirals', levels:[10,11]},
-  {name:'Oncology', levels:[12,13]}
+  { name:'Sympathomimetic Drugs',      filter:i=>CAT_SYMPATHOMIMETIC.has(i.id) },
+  { name:'Sympatholytic Drugs',        filter:i=>CAT_SYMPATHOLYTIC.has(i.id) },
+  { name:'Parasympathomimetic Drugs',  filter:i=>CAT_PARASYMPATHOMIMETIC.has(i.id) },
+  { name:'Parasympatholytic Drugs',    filter:i=>CAT_PARASYMPATHOLYTIC.has(i.id) },
+  { name:'Beta-lactam',                filter:i=>CAT_BETALACTAM.has(i.id) },
+  { name:'Metabolism inhibitor',       filter:i=>CAT_METABOLISM.has(i.id) },
+  { name:'Protein synthesis inhibitor',filter:i=>CAT_PROTEINSYN.has(i.id) },
+  { name:'Oncology',                   filter:i=>[12,13].includes(i.level) },
+  { name:'Antifungals',                filter:i=>i.level===9 },
+  { name:'Antiviral',                  filter:i=>[10,11].includes(i.level) }
 ];
+
+/* Single source of truth for the curriculum taxonomy. Each parent maps to one
+   or more leaf SYSTEMS indices (subcategories). Used by both Browse and Exam. */
+const TAXONOMY=[
+  { name:'Sympathetic Drugs',     idxs:[0,1] },
+  { name:'Parasympathetic Drugs', idxs:[2,3] },
+  { name:'Antibiotics',           idxs:[4,5,6] },
+  { name:'Oncology',              idxs:[7] },
+  { name:'Antifungals',           idxs:[8] },
+  { name:'Antiviral',             idxs:[9] }
+];
+function groupFilter(g){ return i=>g.idxs.some(si=>SYSTEMS[si].filter(i)); }
+
 function itemMatches(i,q){
   if(!q) return true;
   const hay=(i.char+' '+i.meaning.join(' ')+' '+(i.reading?i.reading.join(' '):'')+' '+i.info).toLowerCase();
   return q.split(/\s+/).every(t=>hay.includes(t));
 }
+
+/* Render the STEMS / CLASSES / DRUGS rows for a set of items. */
+function browseRows(items){
+  let html='';
+  [['stem','Stems'],['class','Classes'],['drug','Drugs']].forEach(([tp,label])=>{
+    const tps=items.filter(i=>i.type===tp);
+    if(!tps.length) return;
+    html+=`<div class="sys-row"><span class="sys-label">${label}</span><div class="igrid">`;
+    tps.forEach(i=>{
+      const sel=customSel.has(i.id)?' selsel':'';
+      html+=`<div class="chip ${tp}${sel}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
+    });
+    html+='</div></div>';
+  });
+  return html;
+}
 function renderBrowse(){
   const q=$('#searchInput').value.toLowerCase().trim();
   let html='';
-  SYSTEMS.forEach(sys=>{
-    const items=ITEMS.filter(i=>sys.levels.includes(i.level) && itemMatches(i,q));
-    if(!items.length) return;
-    html+=`<div class="sys-block"><div class="sys-head">${sys.name} <small>· ${items.length} item${items.length>1?'s':''}</small></div>`;
-    [['stem','Stems'],['class','Classes'],['drug','Drugs']].forEach(([tp,label])=>{
-      const tps=items.filter(i=>i.type===tp);
-      if(!tps.length) return;
-      html+=`<div class="sys-row"><span class="sys-label">${label}</span><div class="igrid">`;
-      tps.forEach(i=>{
-        const sel = customSel.has(i.id) ? ' selsel' : '';
-        html+=`<div class="chip ${tp}${sel}" data-item="${i.id}" tabindex="0" role="button" title="${chipTitle(i)}">${i.char}${stageDot(i.id)}</div>`;
-      });
-      html+='</div></div>';
+  TAXONOMY.forEach((grp,gi)=>{
+    const groupItems=ITEMS.filter(i=>groupFilter(grp)(i)&&itemMatches(i,q));
+    if(!groupItems.length) return;
+    const selBtn=`<button class="btn btn-ghost btn-xs sel-all-btn" data-gi="${gi}" title="Select all in this topic">Select all</button>`;
+    html+=`<div class="sys-block"><div class="sys-head">${grp.name} <small>· ${groupItems.length} item${groupItems.length>1?'s':''}</small>${selBtn}</div>`;
+    const single = grp.idxs.length===1;
+    grp.idxs.forEach(si=>{
+      const sys=SYSTEMS[si];
+      const subItems=ITEMS.filter(i=>sys.filter(i)&&itemMatches(i,q));
+      if(!subItems.length) return;
+      /* Skip the redundant subheader when the parent has a single subcategory. */
+      if(!single) html+=`<div class="sys-sub">${sys.name} <small>· ${subItems.length}</small></div>`;
+      html+=browseRows(subItems);
     });
     html+='</div>';
   });
@@ -2366,6 +2467,18 @@ function renderBrowse(){
   $$('#browseList .chip[data-item]').forEach(c=>{
     c.onclick=()=>chipActivate(c.dataset.item, c);
     c.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); chipActivate(c.dataset.item, c); } };
+  });
+  /* Select-all buttons (only visible in select mode via CSS) */
+  $$('#browseList .sel-all-btn').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const gi=parseInt(btn.dataset.gi,10);
+      const inGroup=groupFilter(TAXONOMY[gi]);
+      const q2=$('#searchInput').value.toLowerCase().trim();
+      ITEMS.filter(i=>inGroup(i)&&itemMatches(i,q2)).forEach(i=>customSel.add(i.id));
+      updateSelBar();
+      renderBrowse();
+    };
   });
   browseFocus=-1;
 }
