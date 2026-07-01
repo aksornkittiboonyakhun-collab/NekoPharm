@@ -1842,7 +1842,56 @@ $('#modal').onclick=e=>{ if(e.target.id==='modal') $('#modal').classList.remove(
    ============================================================ */
 let session=null; // {mode, queue:[{item, qs:[...], idx}], done, total}
 
-function normalize(s){ return s.toLowerCase().trim().replace(/[-–—.]/g,'').replace(/\s+/g,' '); }
+/* Greek letters and receptor-subtype shorthand ("β3" / "Beta3" / "B3") are
+   all the same answer in pharmacology, so fold them to one canonical form
+   before comparing: spell out greek letters, convert subscript digits, then
+   collapse "<letter-name> <digit>" (beta 3) and its single-letter shorthand
+   (b3) to the same token. */
+const GREEK_TO_NAME = {'α':'alpha','β':'beta','γ':'gamma','δ':'delta'};
+const SUBSCRIPT_TO_DIGIT = {'₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9'};
+const GREEK_LETTER_SHORTHAND = {alpha:'a', beta:'b', gamma:'g', delta:'d'};
+const NUMBER_WORD_TO_DIGIT = {zero:'0',one:'1',two:'2',three:'3',four:'4',five:'5',six:'6',seven:'7',eight:'8',nine:'9',ten:'10'};
+/* Curated British -> American spelling pairs relevant to pharmacology answers,
+   plus the productive -ise/-ising/-isation -> -ize/-izing/-ization pattern. */
+const BRITISH_TO_AMERICAN = {
+  sulphate:'sulfate', sulphates:'sulfates', sulphur:'sulfur', aluminium:'aluminum',
+  practise:'practice', practised:'practiced', practising:'practicing',
+  licence:'license', licenced:'licensed', defence:'defense', offence:'offense',
+  programme:'program', mould:'mold', grey:'gray', catalogue:'catalog',
+  dialogue:'dialog', analogue:'analog', fibre:'fiber', litre:'liter',
+  centre:'center', metre:'meter', theatre:'theater', manoeuvre:'maneuver'
+};
+/* Filler words that don't change the meaning of a short quiz answer. */
+const FILLER_WORDS = new Set(['a','an','the','and','&','of']);
+/* Very small suffix stemmer: enough to equate plurals and common noun/verb
+   endings (receptor/receptors, constrict/constriction) without a full stemmer. */
+function stemWord(w){
+  if(BRITISH_TO_AMERICAN[w]) w = BRITISH_TO_AMERICAN[w];
+  w = w.replace(/is(e|ed|ing|ation|ations)$/, (m,suf)=> ({e:'ize',ed:'ized',ing:'izing',ation:'ization',ations:'izations'}[suf]));
+  w = w.replace(/(oe|ae)/g,'e');           // British digraphs: oedema/anaemia -> edema/anemia
+  w = w.replace(/our$/,'or');              // tumour/colour -> tumor/color
+  if(w.length>4){
+    const suffixes=['ications','ication','ations','ation','itions','ition','sions','sion','tions','tion','ions','ion','ing'];
+    for(const suf of suffixes){
+      if(w.endsWith(suf) && w.length-suf.length>=3){ w=w.slice(0,-suf.length); break; }
+    }
+  }
+  if(/[^aeiou]ies$/.test(w)) w = w.slice(0,-3)+'y';
+  else if(w.length>3 && /s$/.test(w) && !/ss$/.test(w)) w = w.slice(0,-1);
+  return w;
+}
+function normalize(s){
+  let n = s.toLowerCase().trim();
+  n = n.replace(/[αβγδ]/g, ch=>GREEK_TO_NAME[ch]);
+  n = n.replace(/[₀-₉]/g, ch=>SUBSCRIPT_TO_DIGIT[ch]);
+  n = n.replace(/\b(zero|one|two|three|four|five|six|seven|eight|nine|ten)\b/g, w=>NUMBER_WORD_TO_DIGIT[w]);
+  n = n.replace(/[-–—.]/g,'').replace(/\s+/g,' ').trim();
+  n = n.replace(/\b(alpha|beta|gamma|delta)\s?(\d)/g, (_,name,d)=>GREEK_LETTER_SHORTHAND[name]+d);
+  // word order and small spelling/ending differences shouldn't matter: stem each
+  // word, drop pure filler words, then sort so "beta agonist" == "agonist beta"
+  const words = n.split(' ').filter(Boolean).filter(w=>!FILLER_WORDS.has(w)).map(stemWord).sort();
+  return words.join(' ');
+}
 /* Levenshtein edit distance, capped early once it exceeds `max` for speed. */
 function editDistance(a, b, max){
   const la=a.length, lb=b.length;
@@ -1863,6 +1912,7 @@ function editDistance(a, b, max){
 /* Allowed typos scale with answer length: short answers (e.g. drug names)
    stay strict, longer answers forgive a slip or two. */
 function typoTolerance(len){ return len<4?0:len<=7?1:2; }
+function digitsOf(s){ return (s.match(/\d+/g)||[]).join(''); }
 /* Returns {ok, exact}: ok=accepted at all, exact=matched with no typos. */
 function matchInfo(input, accepted){
   const n=normalize(input);
@@ -1870,6 +1920,9 @@ function matchInfo(input, accepted){
   for(const a of accepted){
     const na=normalize(a);
     if(na===n) return {ok:true, exact:true};
+    // a wrong receptor/drug-generation number (beta3 vs beta2) is never a "spelling
+    // slip" even if the rest of the text is close, so digits must match exactly
+    if(digitsOf(n)!==digitsOf(na)) continue;
     const tol=typoTolerance(na.length);
     if(tol>0 && editDistance(n, na, tol)<=tol) typo=true;
   }
